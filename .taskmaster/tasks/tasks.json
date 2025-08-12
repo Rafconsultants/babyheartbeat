@@ -1,0 +1,236 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 16,
+        "title": "Setup Next.js Frontend Project Structure",
+        "description": "Initialize the Next.js project with TypeScript, configure routing, and set up the basic project structure for the Baby Heartbeat Audio Recreation Platform.",
+        "details": "1. Use Next.js 14.0.3 with App Router for improved performance and SEO\n2. Initialize project: `npx create-next-app@latest heartbeat-platform --typescript --eslint --tailwind --app`\n3. Set up folder structure:\n   - `/app`: Main application routes\n   - `/components`: Reusable UI components\n   - `/lib`: Utility functions\n   - `/types`: TypeScript interfaces\n   - `/public`: Static assets\n4. Configure environment variables for development and production\n5. Set up responsive layout with Tailwind CSS 3.3.0 or newer\n6. Implement basic error boundary component\n7. Configure ESLint and Prettier for code quality\n8. Add responsive meta tags for mobile compatibility\n9. Set up basic SEO configuration with next-seo package",
+        "testStrategy": "1. Verify project builds without errors using `npm run build`\n2. Test responsive layout on multiple device sizes\n3. Validate TypeScript configuration with `tsc --noEmit`\n4. Run ESLint to ensure code quality standards\n5. Test navigation between placeholder pages",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "Implement Supabase Integration and Authentication",
+        "description": "Set up Supabase for database, storage, and authentication services, including user registration and login functionality.",
+        "details": "1. Install Supabase client: `npm install @supabase/supabase-js@2.38.4 @supabase/auth-helpers-nextjs@0.8.7`\n2. Create Supabase project in the dashboard\n3. Configure environment variables for Supabase URL and anon key\n4. Set up authentication with email/magic link:\n   - Create auth provider component\n   - Implement sign-in and sign-up forms\n   - Add magic link authentication flow\n5. Create protected routes with middleware\n6. Set up user session management\n7. Configure Supabase storage buckets:\n   - 'images' bucket for ultrasound uploads\n   - 'audio' bucket for generated heartbeat files\n8. Set up RLS (Row Level Security) policies for buckets and tables\n9. Implement user profile management (optional)",
+        "testStrategy": "1. Test user registration flow\n2. Verify magic link authentication works correctly\n3. Test session persistence and protected routes\n4. Verify storage bucket access permissions\n5. Test user logout functionality\n6. Validate error handling for authentication failures\n7. Test RLS policies by attempting cross-user access",
+        "priority": "high",
+        "dependencies": [
+          16
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 18,
+        "title": "Design and Implement Database Schema",
+        "description": "Create the database schema in Supabase for storing user uploads, BPM data, audio files, and payment entitlements.",
+        "details": "1. Create the following tables in Supabase:\n   - `uploads` table:\n     - id: uuid (primary key)\n     - user_id: uuid (foreign key to auth.users)\n     - image_url: text\n     - bpm_value: integer\n     - audio_url: text\n     - watermarked_audio_url: text\n     - detection_method: text (enum: 'ocr', 'waveform', 'default')\n     - created_at: timestamp\n     - updated_at: timestamp\n   - `entitlements` table:\n     - id: uuid (primary key)\n     - user_id: uuid (foreign key to auth.users)\n     - upload_id: uuid (foreign key to uploads)\n     - payment_id: text\n     - payment_status: text (enum: 'pending', 'completed', 'failed')\n     - created_at: timestamp\n2. Set up foreign key relationships\n3. Create appropriate indexes for query performance\n4. Configure RLS policies to ensure users can only access their own data\n5. Set up database triggers for updated_at timestamps\n6. Create API functions for CRUD operations on these tables",
+        "testStrategy": "1. Test table creation and relationships\n2. Verify foreign key constraints work correctly\n3. Test RLS policies by attempting unauthorized access\n4. Validate CRUD operations for each table\n5. Test query performance with indexes\n6. Verify triggers update timestamps correctly",
+        "priority": "high",
+        "dependencies": [
+          17
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 19,
+        "title": "Build Image Upload Component",
+        "description": "Create a responsive image upload component that allows users to upload ultrasound images in JPEG and PNG formats with preview functionality.",
+        "details": "1. Use React Dropzone (v14.2.3+) for drag-and-drop functionality\n2. Implement file type validation (JPEG, PNG only)\n3. Add file size validation (limit to 10MB)\n4. Create progress indicator for upload process\n5. Implement image preview before upload\n6. Add error handling for invalid files\n7. Create upload function that:\n   - Generates a unique filename\n   - Uploads to Supabase storage 'images' bucket\n   - Shows progress during upload\n8. Style component using Tailwind CSS with responsive design\n9. Add accessibility attributes (ARIA) for screen readers\n10. Implement retry mechanism for failed uploads",
+        "testStrategy": "1. Test file type validation with various file types\n2. Test file size validation with files of different sizes\n3. Verify drag-and-drop functionality works across browsers\n4. Test upload progress indicator\n5. Verify error handling for network failures\n6. Test accessibility with screen readers\n7. Verify responsive design on mobile devices\n8. Test retry functionality for failed uploads",
+        "priority": "high",
+        "dependencies": [
+          16,
+          17
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 20,
+        "title": "Implement OCR-based BPM Detection",
+        "description": "Develop functionality to detect BPM values from text displayed in ultrasound images using OCR technology.",
+        "details": "1. Integrate with GPT-4 Vision API for OCR processing\n2. Install required packages: `npm install openai@4.20.0`\n3. Create a serverless function endpoint for OCR processing\n4. Implement image preprocessing:\n   - Convert image to appropriate format for OCR\n   - Apply contrast enhancement if needed\n5. Send image to GPT-4 Vision with prompt to extract BPM value\n6. Parse response to extract numeric BPM value\n7. Implement validation for extracted BPM (typical range: 110-180 bpm)\n8. Add fallback logic if OCR fails\n9. Store detection method ('ocr') in database\n10. Implement caching to avoid redundant API calls\n11. Add error handling and logging",
+        "testStrategy": "1. Test with various ultrasound images containing BPM text\n2. Verify accuracy of BPM extraction\n3. Test with images where BPM is in different positions\n4. Validate handling of images without BPM text\n5. Test error handling when API fails\n6. Measure processing time to ensure it's within requirements\n7. Verify caching mechanism works correctly",
+        "priority": "high",
+        "dependencies": [
+          18,
+          19
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 21,
+        "title": "Develop Waveform Analysis for BPM Estimation",
+        "description": "Create an algorithm to analyze waveform sections in ultrasound images to estimate BPM when text-based BPM is not available.",
+        "details": "1. Implement image processing using TensorFlow.js (v4.13.0) or OpenCV.js (v4.8.0)\n2. Create functions to:\n   - Detect waveform region in the image\n   - Apply edge detection to identify peaks\n   - Calculate distances between peaks\n   - Convert peak distances to BPM estimation\n3. Implement validation for estimated BPM (typical range: 110-180 bpm)\n4. Add confidence score for estimation accuracy\n5. Create fallback to default BPM (140) if confidence is low\n6. Store detection method ('waveform' or 'default') in database\n7. Optimize algorithm for performance to meet 10-second processing requirement\n8. Implement caching to avoid redundant processing\n9. Add detailed logging for debugging and improvement",
+        "testStrategy": "1. Test with various ultrasound images containing waveforms\n2. Verify accuracy of BPM estimation against known values\n3. Test with different waveform patterns and qualities\n4. Validate fallback to default when waveform is unclear\n5. Measure processing time to ensure it's within requirements\n6. Test edge cases (very high/low BPM, unusual waveforms)\n7. Verify confidence score correlates with actual accuracy",
+        "priority": "high",
+        "dependencies": [
+          18,
+          19
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 22,
+        "title": "Create Audio Generation Service",
+        "description": "Develop a service to generate realistic Doppler-style heartbeat audio files based on detected BPM values.",
+        "details": "1. Use Web Audio API or Tone.js (v14.7.77) for audio synthesis\n2. Create a serverless function for audio generation\n3. Implement heartbeat sound synthesis:\n   - Generate Doppler-style chirps/pulses\n   - Space pulses according to BPM value\n   - Create 8-second audio file\n4. Add watermark audio for free version:\n   - Generate whisper saying \"This heartbeat has been produced by [Company Name]\"\n   - Prepend to heartbeat audio at low volume\n5. Generate both watermarked and clean versions\n6. Convert to MP3 and WAV formats using ffmpeg or similar library\n7. Upload generated files to Supabase 'audio' bucket\n8. Store URLs in database\n9. Implement caching to avoid regenerating identical BPM audio\n10. Add error handling and retry mechanism",
+        "testStrategy": "1. Test audio generation with various BPM values\n2. Verify audio length is exactly 8 seconds\n3. Test audio quality and realism of heartbeat sounds\n4. Verify watermark is audible but not overpowering\n5. Test compatibility with common audio players\n6. Measure processing time to ensure it's within requirements\n7. Test error handling and retry mechanism",
+        "priority": "high",
+        "dependencies": [
+          18,
+          20,
+          21
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 23,
+        "title": "Implement Audio Playback and Download Component",
+        "description": "Create a component for playing and downloading the generated heartbeat audio files.",
+        "details": "1. Use React Audio Player or Howler.js (v2.2.4) for audio playback\n2. Implement custom audio player UI with:\n   - Play/pause button\n   - Progress bar\n   - Volume control\n   - Download button\n3. Style component using Tailwind CSS with responsive design\n4. Add download functionality for MP3 and WAV formats\n5. Implement audio preloading for instant playback\n6. Add fallback for browsers with limited audio support\n7. Implement analytics tracking for playback and downloads\n8. Add accessibility features (keyboard controls, ARIA attributes)\n9. Optimize for mobile devices with touch-friendly controls",
+        "testStrategy": "1. Test playback functionality across browsers\n2. Verify download works for both audio formats\n3. Test responsive design on various screen sizes\n4. Validate accessibility with screen readers\n5. Test touch controls on mobile devices\n6. Verify analytics events are triggered correctly\n7. Test keyboard navigation and controls",
+        "priority": "medium",
+        "dependencies": [
+          16,
+          22
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 24,
+        "title": "Integrate Stripe Payment System",
+        "description": "Implement Stripe Checkout for one-time payments to unlock the clean (non-watermarked) version of the heartbeat audio.",
+        "details": "1. Install Stripe packages: `npm install stripe@14.5.0 @stripe/stripe-js@2.2.0`\n2. Set up Stripe account and API keys\n3. Create serverless function for initiating Stripe Checkout session\n4. Implement Stripe Checkout with:\n   - Product description\n   - One-time payment\n   - Success and cancel URLs\n5. Create webhook endpoint for payment confirmation\n6. Update entitlements table on successful payment\n7. Implement retry logic for webhook failures\n8. Add client-side logic to show payment button for free users\n9. Create success page for completed payments\n10. Implement error handling for payment failures\n11. Add logging for payment events",
+        "testStrategy": "1. Test Stripe Checkout flow with test cards\n2. Verify webhook correctly updates entitlements\n3. Test payment success and failure scenarios\n4. Validate retry logic for webhook failures\n5. Test user experience after successful payment\n6. Verify error handling for payment failures\n7. Test webhook signature validation",
+        "priority": "medium",
+        "dependencies": [
+          18,
+          22
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 25,
+        "title": "Build Processing Status and Progress Indicators",
+        "description": "Create UI components to show processing status and progress during image analysis and audio generation.",
+        "details": "1. Implement loading states using React Suspense and custom hooks\n2. Create progress indicators for:\n   - Image upload\n   - BPM detection\n   - Audio generation\n3. Design error states and retry options\n4. Implement WebSocket or polling for real-time status updates\n5. Add estimated time remaining calculation\n6. Create skeleton loaders for components while data is loading\n7. Style indicators using Tailwind CSS with responsive design\n8. Add accessibility features for screen readers\n9. Implement analytics to track processing times and failure points",
+        "testStrategy": "1. Test progress indicators with various processing times\n2. Verify error states display correctly\n3. Test retry functionality\n4. Validate real-time updates work correctly\n5. Test accessibility with screen readers\n6. Verify responsive design on mobile devices\n7. Test with slow network connections",
+        "priority": "medium",
+        "dependencies": [
+          19,
+          20,
+          21,
+          22
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 26,
+        "title": "Implement Free vs Paid Logic",
+        "description": "Develop the business logic to handle free (watermarked) vs paid (clean) audio delivery based on user entitlements.",
+        "details": "1. Create middleware to check user entitlements\n2. Implement logic to serve appropriate audio version:\n   - Watermarked version for free users\n   - Clean version for paid users\n3. Add UI elements to show upgrade option for free users\n4. Create entitlement checking service\n5. Implement caching for entitlement status\n6. Add analytics to track conversion rates\n7. Create A/B testing framework for different upgrade prompts\n8. Implement secure URL generation for audio files\n9. Add expiry for audio file URLs to prevent unauthorized sharing",
+        "testStrategy": "1. Test audio delivery for free and paid users\n2. Verify upgrade prompts display correctly\n3. Test entitlement checking with various scenarios\n4. Validate URL security and expiry\n5. Test caching mechanism\n6. Verify analytics events are triggered correctly\n7. Test A/B testing framework",
+        "priority": "medium",
+        "dependencies": [
+          22,
+          24
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 27,
+        "title": "Create User Dashboard for History and Redownloads",
+        "description": "Build a user dashboard that displays upload history and allows users to replay or redownload previously generated heartbeat audio files.",
+        "details": "1. Create dashboard layout with responsive design\n2. Implement data fetching from Supabase for user's upload history\n3. Design list/grid view of previous uploads with:\n   - Thumbnail of ultrasound image\n   - BPM value and detection method\n   - Timestamp\n   - Playback and download buttons\n4. Add pagination or infinite scroll for many uploads\n5. Implement sorting and filtering options\n6. Create detailed view for individual uploads\n7. Add delete functionality for unwanted uploads\n8. Implement search functionality\n9. Add analytics tracking for dashboard usage",
+        "testStrategy": "1. Test data fetching and display\n2. Verify playback and download functionality\n3. Test pagination/infinite scroll\n4. Validate sorting and filtering\n5. Test detailed view functionality\n6. Verify delete functionality works correctly\n7. Test search functionality\n8. Validate responsive design on various screen sizes",
+        "priority": "medium",
+        "dependencies": [
+          18,
+          23
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 28,
+        "title": "Implement Comprehensive Error Handling",
+        "description": "Develop a robust error handling system for all aspects of the application, including graceful fallbacks and user-friendly error messages.",
+        "details": "1. Create global error boundary component\n2. Implement error handling for:\n   - Image upload failures\n   - BPM detection failures\n   - Audio generation failures\n   - Payment processing errors\n   - Authentication issues\n   - Database connection problems\n3. Design user-friendly error messages\n4. Create retry mechanisms where appropriate\n5. Implement logging service using a tool like Sentry (v7.80.0)\n6. Add error reporting to backend\n7. Create fallback UI components\n8. Implement offline detection and handling\n9. Add analytics for error tracking and monitoring",
+        "testStrategy": "1. Test error handling for each failure scenario\n2. Verify retry mechanisms work correctly\n3. Validate error messages are user-friendly\n4. Test fallback UI components\n5. Verify logging captures appropriate details\n6. Test offline handling\n7. Validate error reporting to backend",
+        "priority": "medium",
+        "dependencies": [
+          19,
+          20,
+          21,
+          22,
+          24
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 29,
+        "title": "Optimize Performance and Implement Caching",
+        "description": "Optimize application performance to ensure processing completes within 10 seconds and implement caching strategies to improve user experience.",
+        "details": "1. Implement React Query (v5.8.4) or SWR (v2.2.4) for data fetching and caching\n2. Add Redis or similar for server-side caching\n3. Optimize image processing pipeline:\n   - Resize images before processing\n   - Use WebWorkers for CPU-intensive tasks\n   - Implement parallel processing where possible\n4. Add CDN caching for static assets\n5. Implement lazy loading for non-critical components\n6. Add memoization for expensive calculations\n7. Optimize database queries with appropriate indexes\n8. Implement service worker for offline support\n9. Add performance monitoring using Lighthouse CI\n10. Create performance budget and enforce it in CI/CD pipeline",
+        "testStrategy": "1. Measure processing times for various image sizes\n2. Test caching effectiveness\n3. Verify performance on low-end devices\n4. Run Lighthouse audits for performance metrics\n5. Test offline functionality\n6. Measure Time to Interactive and other Core Web Vitals\n7. Verify database query performance",
+        "priority": "medium",
+        "dependencies": [
+          20,
+          21,
+          22,
+          25
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 30,
+        "title": "Deploy Application to Production",
+        "description": "Set up CI/CD pipeline and deploy the application to production environment with monitoring and analytics.",
+        "details": "1. Configure Vercel for Next.js deployment\n2. Set up CI/CD pipeline with GitHub Actions\n3. Configure environment variables for production\n4. Set up domain and SSL certificate\n5. Implement monitoring with Vercel Analytics or similar\n6. Configure Supabase production environment\n7. Set up backup strategy for database\n8. Implement logging and error tracking with Sentry\n9. Add security headers and CSP\n10. Configure rate limiting for API endpoints\n11. Set up status page for service health\n12. Create deployment checklist and rollback procedure\n13. Implement privacy policy and terms of service pages",
+        "testStrategy": "1. Test deployment process end-to-end\n2. Verify all features work in production environment\n3. Test SSL configuration\n4. Validate monitoring and alerts\n5. Test backup and restore procedures\n6. Verify security headers and CSP\n7. Test rate limiting\n8. Validate analytics data collection",
+        "priority": "low",
+        "dependencies": [
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-12T02:00:22.353Z",
+      "updated": "2025-08-12T02:17:18.318Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

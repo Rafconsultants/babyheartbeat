@@ -1,0 +1,160 @@
+# Baby Heartbeat Audio Recreation Platform - Product Requirements Document
+
+## Project Overview
+A web-based platform that converts ultrasound images into realistic heartbeat audio files. Users upload ultrasound images containing baby scans with waveform sections, and the system analyzes the image to detect or estimate the BPM, then generates an 8-second audio file with realistic heartbeat sounds.
+
+## Core User Flow
+
+### 1. Image Upload
+- User uploads ultrasound image via browser or mobile web interface
+- Image contains both baby scan and waveform section
+- Image may or may not display textual BPM value
+- Accepts JPEG and PNG formats
+- Store in cloud storage bucket
+
+### 2. Image Analysis
+- System attempts to detect BPM from on-screen text using OCR
+- If BPM text not found, estimate BPM from waveform analysis
+- If estimation fails, default to preset BPM (e.g., 140)
+- Processing should complete within ~10 seconds for typical images
+
+### 3. Audio Generation
+- Generate 8-second audio file with pulses/chirps matching the BPM
+- Use realistic Doppler-style chirps/pulses
+- Free version: prepend soft whisper saying "This heartbeat has been produced by [Company Name]"
+- Paid version: no whisper watermark
+- Audio output must be compatible with common players (MP3, WAV)
+
+### 4. Data Storage
+- Store original image, BPM value, audio file URL, and associated metadata
+- Link stored data to user's account (if authenticated)
+- Store user ID, upload timestamp, payment/entitlement status
+- Allow retrieval for playback or redownload
+
+### 5. Output Delivery
+- Show audio player for immediate playback
+- Provide download link for generated audio file
+- Simple upload form with progress/loading indicator
+- Audio playback control with download option
+
+### 6. Free vs Paid Logic
+- Default behavior: show watermarked version for free
+- Option to "Unlock clean version" by paying one-time fee
+- On successful payment, regenerate or deliver clean (no watermark) audio
+- Payment button for unlocking clean version
+
+## Functional Requirements
+
+### Image Handling
+- Accept JPEG and PNG formats
+- Upload via browser or mobile web interface
+- Store in cloud storage bucket
+- Error handling for failed uploads
+
+### BPM Detection
+- Read from text in image where available using OCR
+- If missing, detect waveform peaks and calculate BPM
+- Use default BPM if detection fails
+- Error handling for failed BPM detection
+
+### Audio Recreation
+- Always 8 seconds long
+- Match pulse spacing to BPM value
+- Use realistic Doppler-style chirps/pulses
+- Watermark (free version) is audio whisper at start
+- Paid version omits watermark
+- Error handling for failed audio generation
+
+### Data Storage
+- Store user ID (if logged in), upload timestamp, image file URL, BPM value, audio file URL, payment/entitlement status
+- Allow retrieval for playback or redownload
+- Secure cloud storage and database linking files only to correct user
+
+### User Interface
+- Simple upload form
+- Progress/loading indicator during processing
+- Audio playback control with download option
+- Payment button for unlocking clean version
+- Accessible via desktop and mobile browsers
+
+### Payments
+- One-time purchase using Stripe Checkout
+- Mark entitlement in database on success
+- Restrict clean audio delivery to entitled users
+- Webhook to confirm payment and mark entitlement
+
+## Non-Functional Requirements
+
+### Performance
+- Processing should complete within ~10 seconds for typical images
+- Accessible via desktop and mobile browsers
+- Audio output must be compatible with common players (MP3, WAV)
+
+### Security
+- Cloud storage and database must be secure
+- Link files only to correct user
+- Secure payment processing
+
+### Error Handling
+- Handle failed BPM detection
+- Handle failed audio generation
+- Handle payment failures
+- Webhook retries for payment confirmations
+
+## Technical Architecture
+
+### Frontend
+- React/Next.js application
+- Image upload interface
+- Audio playback controls
+- Payment integration
+- Progress indicators
+
+### Backend
+- Supabase for database and authentication
+- GPT-4 Vision for BPM text detection
+- Audio generation service
+- File storage (Supabase Storage)
+- Stripe integration for payments
+
+### Database Schema
+- Users table (Supabase Auth)
+- Uploads table (image metadata, BPM, audio URLs)
+- Entitlements table (payment status)
+
+## Build Plan
+
+### Phase 1: MVP (Functionality Only)
+- Frontend: image upload, progress state, audio playback/download
+- Backend: BPM detection, audio generation with watermark
+- No authentication, no paywall, no upsells
+
+### Phase 2: Database & Storage
+- Supabase schema and storage buckets
+- Persist upload records, BPM, file URLs, timestamps
+
+### Phase 3: Authentication
+- Supabase Auth with email/magic link
+- Tie uploads to user accounts
+
+### Phase 4: Payment System
+- Stripe Checkout integration
+- Webhook handling for payment confirmation
+- Clean audio delivery for paid users
+
+### Phase 5: Integration & Testing
+- Wire everything together
+- Test happy path and failure cases
+- Implement error handling and logging
+
+### Phase 6: Deployment
+- Deploy to Vercel + Supabase
+- Domain setup and analytics
+- Privacy/disclaimer copy
+
+## Success Metrics
+- Successful BPM detection rate
+- Audio generation success rate
+- User conversion from free to paid
+- Processing time performance
+- Error rate monitoring
