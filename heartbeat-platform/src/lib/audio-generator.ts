@@ -12,6 +12,13 @@ export interface AudioGenerationOptions {
   gptAnalysis?: UltrasoundAnalysis; // Enhanced GPT analysis
 }
 
+export interface AudioGenerationResult {
+  audioUrl: string;
+  duration: number;
+  bpm: number;
+  fileSize: number;
+}
+
 export class AudioGenerator {
   private static audioContext: AudioContext | null = null;
 
@@ -19,16 +26,31 @@ export class AudioGenerator {
    * Generate exact ultrasound heartbeat audio based on detailed GPT analysis
    */
   static async generateHeartbeatAudio(options: AudioGenerationOptions): Promise<AudioGenerationResult> {
+    console.log('🎵 Starting audio generation with options:', options);
+    
     try {
       if (!this.audioContext) {
         this.audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+        console.log('🎵 AudioContext created with sample rate:', this.audioContext.sampleRate);
       }
+      
       const audioBuffer = await this.createExactUltrasoundHeartbeatWaveform(options);
+      console.log('🎵 Audio buffer created successfully');
+      
       const audioBlob = await this.audioBufferToBlob(audioBuffer);
+      console.log('🎵 Audio blob created, size:', audioBlob.size, 'bytes');
+      
       const audioUrl = URL.createObjectURL(audioBlob);
-      return { audioUrl, duration: options.duration, bpm: options.bpm, fileSize: audioBlob.size };
+      console.log('🎵 Audio URL created:', audioUrl);
+      
+      return { 
+        audioUrl, 
+        duration: options.duration, 
+        bpm: options.bpm, 
+        fileSize: audioBlob.size 
+      };
     } catch (error) {
-      console.error('Audio generation failed:', error);
+      console.error('❌ Audio generation failed:', error);
       throw new Error('Failed to generate heartbeat audio');
     }
   }
@@ -38,16 +60,24 @@ export class AudioGenerator {
    */
   private static async createExactUltrasoundHeartbeatWaveform(options: AudioGenerationOptions): Promise<AudioBuffer> {
     const { bpm, duration, sampleRate, gptAnalysis } = options;
+    
+    console.log('🎵 Creating waveform with BPM:', bpm, 'Duration:', duration, 'Sample Rate:', sampleRate);
+    
     const beatsPerSecond = bpm / 60;
     const beatInterval = 1 / beatsPerSecond;
     const buffer = this.audioContext!.createBuffer(1, sampleRate * duration, sampleRate);
     const channelData = buffer.getChannelData(0);
+
+    console.log('🎵 Beat interval:', beatInterval, 'seconds');
+    console.log('🎵 Total beats in duration:', Math.floor(duration * beatsPerSecond));
 
     for (let i = 0; i < duration; i += beatInterval) {
       const beatStart = Math.floor(i * sampleRate);
       const beatEnd = Math.floor((i + 0.6) * sampleRate); // Each beat lasts 0.6 seconds
       this.addExactUltrasoundHeartbeat(channelData, beatStart, beatEnd, sampleRate, options.isWatermarked, gptAnalysis);
     }
+    
+    console.log('🎵 Waveform creation completed');
     return buffer;
   }
 
@@ -63,6 +93,7 @@ export class AudioGenerator {
     gptAnalysis?: UltrasoundAnalysis
   ) {
     const beatDuration = endSample - startSample;
+    console.log('🎵 Adding heartbeat at sample', startSample, 'to', endSample, 'duration:', beatDuration);
 
     // Use GPT analysis for precise audio characteristics
     const characteristics = gptAnalysis?.audioCharacteristics || {
@@ -78,6 +109,8 @@ export class AudioGenerator {
       dopplerEffect: 'moderate' as const
     };
 
+    console.log('🎵 Using audio characteristics:', characteristics);
+
     // Apply rhythm variations if irregular
     let rhythmVariation = 1.0;
     if (characteristics.rhythm === 'irregular') {
@@ -90,13 +123,13 @@ export class AudioGenerator {
     // First whoosh (systolic - blood rushing into the heart)
     const firstWhooshDuration = Math.floor(beatDuration * 0.35 * rhythmVariation);
     this.addExactUltrasoundWhoosh(
-      channelData, 
-      startSample, 
-      firstWhooshDuration, 
+      channelData,
+      startSample,
+      firstWhooshDuration,
       characteristics.frequencyRange.systolic,
       characteristics.systolicIntensity,
       characteristics.dopplerEffect,
-      sampleRate, 
+      sampleRate,
       'systolic'
     );
 
@@ -107,22 +140,22 @@ export class AudioGenerator {
     const secondWhooshStart = startSample + firstWhooshDuration + pauseDuration;
     const secondWhooshDuration = Math.floor(beatDuration * 0.35 * rhythmVariation);
     this.addExactUltrasoundWhoosh(
-      channelData, 
-      secondWhooshStart, 
-      secondWhooshDuration, 
+      channelData,
+      secondWhooshStart,
+      secondWhooshDuration,
       characteristics.frequencyRange.diastolic,
       characteristics.diastolicIntensity,
       characteristics.dopplerEffect,
-      sampleRate, 
+      sampleRate,
       'diastolic'
     );
 
     // Add authentic ultrasound background noise based on GPT analysis
     this.addExactUltrasoundBackgroundNoise(
-      channelData, 
-      startSample, 
-      endSample, 
-      sampleRate, 
+      channelData,
+      startSample,
+      endSample,
+      sampleRate,
       characteristics.backgroundNoise
     );
 
@@ -145,6 +178,8 @@ export class AudioGenerator {
     sampleRate: number,
     type: 'systolic' | 'diastolic'
   ) {
+    console.log('🎵 Adding', type, 'whoosh with frequency range:', frequencyRange, 'intensity:', intensity);
+    
     const dopplerMultiplier = dopplerEffect === 'strong' ? 1.5 : dopplerEffect === 'moderate' ? 1.0 : 0.5;
 
     for (let i = 0; i < duration; i++) {
@@ -193,6 +228,7 @@ export class AudioGenerator {
     noiseLevel: 'low' | 'medium' | 'high'
   ) {
     const noiseMultiplier = noiseLevel === 'high' ? 1.5 : noiseLevel === 'medium' ? 1.0 : 0.5;
+    console.log('🎵 Adding background noise with level:', noiseLevel, 'multiplier:', noiseMultiplier);
 
     for (let i = startSample; i < endSample; i++) {
       if (i >= channelData.length) break;
@@ -231,7 +267,9 @@ export class AudioGenerator {
    * Convert AudioBuffer to Blob
    */
   private static async audioBufferToBlob(audioBuffer: AudioBuffer): Promise<Blob> {
+    console.log('🎵 Converting AudioBuffer to Blob...');
     const wavBuffer = this.createWAVFile(audioBuffer);
+    console.log('🎵 WAV file created, size:', wavBuffer.byteLength, 'bytes');
     return new Blob([wavBuffer], { type: 'audio/wav' });
   }
 
@@ -248,6 +286,10 @@ export class AudioGenerator {
     const byteRate = sampleRate * blockAlign;
     const dataSize = length * blockAlign;
     const bufferSize = 44 + dataSize;
+
+    console.log('🎵 Creating WAV file with parameters:', {
+      length, sampleRate, channels, bitsPerSample, dataSize, bufferSize
+    });
 
     const buffer = new ArrayBuffer(bufferSize);
     const view = new DataView(buffer);
@@ -288,6 +330,8 @@ export class AudioGenerator {
       view.setInt16(offset, sample * 0x7FFF, true);
       offset += 2;
     }
+    
+    console.log('🎵 WAV file creation completed');
     return buffer;
   }
 
@@ -296,6 +340,9 @@ export class AudioGenerator {
    * This creates the most authentic ultrasound Doppler heartbeat audio
    */
   static async generateSimpleHeartbeat(bpm: number, duration: number = 8, gptAnalysis?: UltrasoundAnalysis): Promise<string> {
+    console.log('🎵 Generating simple heartbeat with BPM:', bpm, 'Duration:', duration);
+    console.log('🎵 GPT Analysis:', gptAnalysis);
+    
     try {
       const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       const sampleRate = audioContext.sampleRate;
@@ -304,6 +351,11 @@ export class AudioGenerator {
 
       const beatsPerSecond = bpm / 60;
       const beatInterval = 1 / beatsPerSecond;
+
+      console.log('🎵 Audio parameters:', {
+        sampleRate, duration, beatsPerSecond, beatInterval,
+        totalBeats: Math.floor(duration * beatsPerSecond)
+      });
 
       // Use GPT analysis for precise characteristics
       const characteristics = gptAnalysis?.audioCharacteristics || {
@@ -318,6 +370,8 @@ export class AudioGenerator {
         backgroundNoise: 'medium' as const,
         dopplerEffect: 'moderate' as const
       };
+
+      console.log('🎵 Using characteristics:', characteristics);
 
       for (let time = 0; time < duration; time += beatInterval) {
         const startSample = Math.floor(time * sampleRate);
@@ -338,7 +392,7 @@ export class AudioGenerator {
 
           // First whoosh (systolic) - blood rushing in
           if (t < 0.21 * rhythmVariation) {
-            const baseFreq = characteristics.frequencyRange.systolic.min + 
+            const baseFreq = characteristics.frequencyRange.systolic.min +
               (characteristics.frequencyRange.systolic.max - characteristics.frequencyRange.systolic.min) * 0.5;
             const freq = baseFreq + Math.sin(t * Math.PI * 3) * (characteristics.frequencyRange.systolic.max - characteristics.frequencyRange.systolic.min) * 0.5;
             const whoosh = Math.sin(t * freq * 2 * Math.PI) * decay * characteristics.systolicIntensity;
@@ -352,7 +406,7 @@ export class AudioGenerator {
           }
           // Second whoosh (diastolic) - blood flowing out
           else if (t < 0.48 * rhythmVariation) {
-            const baseFreq = characteristics.frequencyRange.diastolic.min + 
+            const baseFreq = characteristics.frequencyRange.diastolic.min +
               (characteristics.frequencyRange.diastolic.max - characteristics.frequencyRange.diastolic.min) * 0.5;
             const freq = baseFreq - Math.sin((t - 0.27) * Math.PI * 2.5) * (characteristics.frequencyRange.diastolic.max - characteristics.frequencyRange.diastolic.min) * 0.4;
             const whoosh = Math.sin((t - 0.27) * freq * 2 * Math.PI) * decay * characteristics.diastolicIntensity;
@@ -375,18 +429,12 @@ export class AudioGenerator {
       const wavBuffer = this.createWAVFile(buffer);
       const blob = new Blob([wavBuffer], { type: 'audio/wav' });
 
+      console.log('🎵 Audio generation completed, blob size:', blob.size, 'bytes');
       return URL.createObjectURL(blob);
     } catch (error) {
-      console.error('Simple audio generation failed:', error);
+      console.error('❌ Simple audio generation failed:', error);
       // Fallback to demo audio
       return '/demo-heartbeat.mp3';
     }
   }
-}
-
-export interface AudioGenerationResult {
-  audioUrl: string;
-  duration: number;
-  bpm: number;
-  fileSize: number;
 }

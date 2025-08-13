@@ -36,11 +36,13 @@ export default function Home() {
   }, [])
 
   const handleImageSelect = async (file: File) => {
+    console.log('🚀 Starting image processing for file:', file.name, 'Size:', file.size);
     setError(null)
     setResult(null)
     
     try {
       // Step 1: Upload and analyze image with GPT-4 Vision
+      console.log('🚀 Step 1: Starting image analysis...');
       setProcessingState({
         isProcessing: true,
         step: 'uploading',
@@ -48,10 +50,12 @@ export default function Home() {
       })
 
       // Enhanced GPT-4 Vision analysis with detailed audio characteristics
+      console.log('🚀 Calling GPTUltrasoundAnalyzer.analyzeUltrasound...');
       const gptAnalysis = await GPTUltrasoundAnalyzer.analyzeUltrasound(file)
-      console.log('Enhanced GPT-4 Vision Analysis:', gptAnalysis)
+      console.log('🚀 GPT Analysis completed:', gptAnalysis);
 
       // Step 2: Generate audio based on detailed GPT analysis
+      console.log('🚀 Step 2: Starting audio generation...');
       setProcessingState({
         isProcessing: true,
         step: 'generating',
@@ -59,7 +63,9 @@ export default function Home() {
       })
 
       // Generate realistic heartbeat audio using detailed GPT analysis
+      console.log('🚀 Calling AudioGenerator.generateSimpleHeartbeat...');
       const audioUrl = await AudioGenerator.generateSimpleHeartbeat(gptAnalysis.bpm, 8, gptAnalysis)
+      console.log('🚀 Audio generation completed, URL:', audioUrl);
 
       // Create the result with enhanced GPT analysis
       const finalResult: AudioGenerationResponse = {
@@ -72,6 +78,7 @@ export default function Home() {
         analysis: gptAnalysis.analysis // Pass detailed GPT analysis to result
       }
 
+      console.log('🚀 Final result created:', finalResult);
       setResult(finalResult)
       setProcessingState({
         isProcessing: false,
@@ -79,8 +86,10 @@ export default function Home() {
         progress: 100
       })
 
+      console.log('🚀 Processing completed successfully!');
+
     } catch (err) {
-      console.error('Processing failed:', err)
+      console.error('❌ Processing failed:', err);
       setError('Unable to process your image at this time. Please try again.')
       setProcessingState({
         isProcessing: false,

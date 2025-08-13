@@ -29,14 +29,20 @@ export class GPTUltrasoundAnalyzer {
    * Analyze ultrasound image with GPT-4 Vision and get detailed audio characteristics
    */
   static async analyzeUltrasound(imageFile: File): Promise<UltrasoundAnalysis> {
+    console.log('🔍 Starting ultrasound analysis for file:', imageFile.name, 'Size:', imageFile.size);
+    
     try {
       const base64Image = await this.fileToBase64(imageFile);
+      console.log('🔍 Image converted to base64, length:', base64Image.length);
+      
       // In browser environment, we need to use NEXT_PUBLIC_ prefix
       const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
 
       if (!apiKey) {
         throw new Error('OpenAI API key not found. Please check your .env.local file.');
       }
+
+      console.log('🔍 API key found, length:', apiKey.length);
 
       const prompt = `Analyze this fetal ultrasound image and extract the following information:
 
@@ -66,6 +72,8 @@ Respond in this exact JSON format:
 
 If you cannot determine specific values, provide reasonable estimates based on typical fetal heart characteristics.`;
 
+      console.log('🔍 Making API request to OpenAI...');
+      
       const response = await fetch(this.GPT_API_URL, {
         method: 'POST',
         headers: {
@@ -96,12 +104,19 @@ If you cannot determine specific values, provide reasonable estimates based on t
         })
       });
 
+      console.log('🔍 API response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error(`GPT API error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('🔍 API error response:', errorText);
+        throw new Error(`GPT API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('🔍 API response data:', data);
+      
       const content = data.choices[0]?.message?.content;
+      console.log('🔍 API response content:', content);
 
       if (!content) {
         throw new Error('No response from GPT API');
@@ -110,14 +125,18 @@ If you cannot determine specific values, provide reasonable estimates based on t
       // Parse JSON response
       try {
         const result = JSON.parse(content);
-        return this.validateAndEnhanceAnalysis(result);
+        console.log('🔍 Parsed JSON result:', result);
+        const validatedResult = this.validateAndEnhanceAnalysis(result);
+        console.log('🔍 Validated result:', validatedResult);
+        return validatedResult;
       } catch (parseError) {
-        console.error('JSON parsing failed, extracting BPM from text:', parseError);
+        console.error('🔍 JSON parsing failed, extracting BPM from text:', parseError);
         return this.extractFromText(content);
       }
     } catch (error) {
-      console.error('GPT Ultrasound analysis failed:', error);
+      console.error('🔍 GPT Ultrasound analysis failed:', error);
       // Try fallback OCR method
+      console.log('🔍 Trying fallback OCR detection...');
       return this.fallbackOCRDetection(imageFile);
     }
   }
