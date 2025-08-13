@@ -7,6 +7,7 @@ import AudioPlayer from '@/components/AudioPlayer'
 import { ProcessingState, AudioGenerationResponse } from '@/types'
 import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer' // Updated import
 import { AudioGenerator } from '@/lib/audio-generator' // Updated import
+import { testOpenAIAPI } from '@/lib/api-test' // Add API test import
 
 export default function Home() {
   const [processingState, setProcessingState] = useState<ProcessingState>({
@@ -16,6 +17,7 @@ export default function Home() {
   })
   const [result, setResult] = useState<AudioGenerationResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [apiTestResult, setApiTestResult] = useState<string | null>(null)
 
   const handleImageSelect = async (file: File) => {
     setError(null)
@@ -92,6 +94,16 @@ export default function Home() {
     }
   }
 
+  const handleAPITest = async () => {
+    setApiTestResult('Testing...')
+    try {
+      const success = await testOpenAIAPI()
+      setApiTestResult(success ? '✅ API Test Successful!' : '❌ API Test Failed')
+    } catch (error) {
+      setApiTestResult('❌ API Test Error: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-blue-50">
       {/* Header */}
@@ -110,6 +122,20 @@ export default function Home() {
                 <h1 className="text-2xl font-bold text-gray-900">Baby Heartbeat Audio</h1>
                 <p className="text-sm text-gray-500">AI-Powered Ultrasound to Audio Conversion</p>
               </div>
+            </div>
+            {/* API Test Button */}
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleAPITest}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+              >
+                Test API
+              </button>
+              {apiTestResult && (
+                <span className={`text-sm font-medium ${apiTestResult.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>
+                  {apiTestResult}
+                </span>
+              )}
             </div>
           </div>
         </div>
