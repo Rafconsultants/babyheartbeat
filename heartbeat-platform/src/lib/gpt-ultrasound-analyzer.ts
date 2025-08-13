@@ -23,7 +23,7 @@ export interface UltrasoundAnalysis {
 
 export class GPTUltrasoundAnalyzer {
   private static readonly GPT_API_URL = 'https://api.openai.com/v1/chat/completions';
-  private static readonly GPT_MODEL = 'gpt-4-vision-preview';
+  private static readonly GPT_MODEL = 'gpt-4o-mini';
 
   /**
    * Analyze ultrasound image with GPT-4 Vision and get detailed audio characteristics

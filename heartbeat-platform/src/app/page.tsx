@@ -7,7 +7,7 @@ import AudioPlayer from '@/components/AudioPlayer'
 import { ProcessingState, AudioGenerationResponse } from '@/types'
 import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer' // Updated import
 import { AudioGenerator } from '@/lib/audio-generator' // Updated import
-import { testOpenAIAPI } from '@/lib/api-test' // Add API test import
+import { testOpenAIAPI, testAvailableModels } from '@/lib/api-test' // Add API test import
 
 export default function Home() {
   const [processingState, setProcessingState] = useState<ProcessingState>({
@@ -18,6 +18,7 @@ export default function Home() {
   const [result, setResult] = useState<AudioGenerationResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [apiTestResult, setApiTestResult] = useState<string | null>(null)
+  const [modelsResult, setModelsResult] = useState<string | null>(null)
 
   const handleImageSelect = async (file: File) => {
     setError(null)
@@ -104,6 +105,16 @@ export default function Home() {
     }
   }
 
+  const handleModelsTest = async () => {
+    setModelsResult('Testing...')
+    try {
+      const models = await testAvailableModels()
+      setModelsResult(`✅ Available Models: ${models.slice(0, 5).join(', ')}${models.length > 5 ? '...' : ''}`)
+    } catch (error) {
+      setModelsResult('❌ Models Test Error: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-blue-50">
       {/* Header */}
@@ -131,9 +142,20 @@ export default function Home() {
               >
                 Test API
               </button>
+              <button
+                onClick={handleModelsTest}
+                className="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+              >
+                Test Models
+              </button>
               {apiTestResult && (
                 <span className={`text-sm font-medium ${apiTestResult.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>
                   {apiTestResult}
+                </span>
+              )}
+              {modelsResult && (
+                <span className={`text-sm font-medium ${modelsResult.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>
+                  {modelsResult}
                 </span>
               )}
             </div>
