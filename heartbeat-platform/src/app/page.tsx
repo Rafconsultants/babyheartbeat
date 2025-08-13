@@ -1,13 +1,13 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import ImageUpload from '@/components/ImageUpload'
 import ProcessingStatus from '@/components/ProcessingStatus'
 import AudioPlayer from '@/components/AudioPlayer'
 import { ProcessingState, AudioGenerationResponse } from '@/types'
 import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer' // Updated import
 import { AudioGenerator } from '@/lib/audio-generator' // Updated import
-import { testOpenAIAPI, testAvailableModels } from '@/lib/api-test' // Add API test import
+import { testOpenAIAPI } from '@/lib/api-test' // Add API test import
 
 export default function Home() {
   const [processingState, setProcessingState] = useState<ProcessingState>({
@@ -17,12 +17,33 @@ export default function Home() {
   })
   const [result, setResult] = useState<AudioGenerationResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [apiTestResult, setApiTestResult] = useState<string | null>(null)
-  const [modelsResult, setModelsResult] = useState<string | null>(null)
+  const [apiStatus, setApiStatus] = useState<'checking' | 'available' | 'unavailable'>('checking')
+
+  // Check API status on component mount
+  useEffect(() => {
+    const checkAPIStatus = async () => {
+      try {
+        const success = await testOpenAIAPI()
+        setApiStatus(success ? 'available' : 'unavailable')
+      } catch (error) {
+        console.error('API check failed:', error)
+        setApiStatus('unavailable')
+      }
+    }
+    
+    checkAPIStatus()
+  }, [])
 
   const handleImageSelect = async (file: File) => {
     setError(null)
     setResult(null)
+    
+    // Check API availability before processing
+    if (apiStatus === 'unavailable') {
+      setError('OpenAI API is not available. Please check your API key configuration.')
+      return
+    }
+    
     try {
       // Step 1: Upload and analyze image with GPT-4 Vision
       setProcessingState({
@@ -95,26 +116,6 @@ export default function Home() {
     }
   }
 
-  const handleAPITest = async () => {
-    setApiTestResult('Testing...')
-    try {
-      const success = await testOpenAIAPI()
-      setApiTestResult(success ? '✅ API Test Successful!' : '❌ API Test Failed')
-    } catch (error) {
-      setApiTestResult('❌ API Test Error: ' + (error instanceof Error ? error.message : 'Unknown error'))
-    }
-  }
-
-  const handleModelsTest = async () => {
-    setModelsResult('Testing...')
-    try {
-      const models = await testAvailableModels()
-      setModelsResult(`✅ Available Models: ${models.slice(0, 5).join(', ')}${models.length > 5 ? '...' : ''}`)
-    } catch (error) {
-      setModelsResult('❌ Models Test Error: ' + (error instanceof Error ? error.message : 'Unknown error'))
-    }
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-blue-50">
       {/* Header */}
@@ -134,29 +135,16 @@ export default function Home() {
                 <p className="text-sm text-gray-500">AI-Powered Ultrasound to Audio Conversion</p>
               </div>
             </div>
-            {/* API Test Button */}
+            {/* API Status Indicator */}
             <div className="flex items-center space-x-4">
-              <button
-                onClick={handleAPITest}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
-              >
-                Test API
-              </button>
-              <button
-                onClick={handleModelsTest}
-                className="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
-              >
-                Test Models
-              </button>
-              {apiTestResult && (
-                <span className={`text-sm font-medium ${apiTestResult.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>
-                  {apiTestResult}
-                </span>
+              {apiStatus === 'checking' && (
+                <span className="text-sm text-gray-500">Checking API...</span>
               )}
-              {modelsResult && (
-                <span className={`text-sm font-medium ${modelsResult.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>
-                  {modelsResult}
-                </span>
+              {apiStatus === 'available' && (
+                <span className="text-sm text-green-600">✅ API Ready</span>
+              )}
+              {apiStatus === 'unavailable' && (
+                <span className="text-sm text-red-600">❌ API Unavailable</span>
               )}
             </div>
           </div>

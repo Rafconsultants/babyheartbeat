@@ -64,32 +64,3 @@ export async function testOpenAIAPI() {
     return false;
   }
 }
-
-// Test available models
-export async function testAvailableModels() {
-  try {
-    const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
-    
-    if (!apiKey) {
-      throw new Error('OpenAI API key not found');
-    }
-
-    const response = await fetch('https://api.openai.com/v1/models', {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch models: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log('Available models:', data.data.map((model: any) => model.id));
-    return data.data.map((model: any) => model.id);
-    
-  } catch (error) {
-    console.error('Failed to fetch models:', error);
-    return [];
-  }
-}
