@@ -40,7 +40,7 @@ export default function Home() {
     
     // Check API availability before processing
     if (apiStatus === 'unavailable') {
-      setError('OpenAI API is not available. Please check your API key configuration.')
+      setError('Service temporarily unavailable. Please try again later.')
       return
     }
     
@@ -86,12 +86,12 @@ export default function Home() {
 
     } catch (err) {
       console.error('Processing failed:', err)
-      setError(err instanceof Error ? err.message : 'An unknown error occurred during processing.')
+      setError('Unable to process your image at this time. Please try again.')
       setProcessingState({
         isProcessing: false,
         step: 'error',
         progress: 0,
-        error: err instanceof Error ? err.message : 'An unknown error occurred.'
+        error: 'Unable to process your image at this time. Please try again.'
       })
     }
   }
@@ -134,18 +134,6 @@ export default function Home() {
                 <h1 className="text-2xl font-bold text-gray-900">Baby Heartbeat Audio</h1>
                 <p className="text-sm text-gray-500">AI-Powered Ultrasound to Audio Conversion</p>
               </div>
-            </div>
-            {/* API Status Indicator */}
-            <div className="flex items-center space-x-4">
-              {apiStatus === 'checking' && (
-                <span className="text-sm text-gray-500">Checking API...</span>
-              )}
-              {apiStatus === 'available' && (
-                <span className="text-sm text-green-600">✅ API Ready</span>
-              )}
-              {apiStatus === 'unavailable' && (
-                <span className="text-sm text-red-600">❌ API Unavailable</span>
-              )}
             </div>
           </div>
         </div>
