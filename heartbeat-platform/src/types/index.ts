@@ -2,26 +2,26 @@
 export interface User {
   id: string;
   email: string;
-  created_at: string;
-  updated_at: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Upload-related types
 export interface Upload {
   id: string;
-  user_id?: string;
-  image_url: string;
-  bpm_value: number;
-  audio_url: string;
-  is_paid: boolean;
-  created_at: string;
-  updated_at: string;
+  userId: string;
+  imageUrl: string;
+  bpm: number;
+  audioUrl: string;
+  isWatermarked: boolean;
+  createdAt: Date;
 }
 
 // Audio generation types
 export interface AudioGenerationRequest {
   imageFile: File;
-  userId?: string;
+  bpm?: number;
 }
 
 export interface AudioGenerationResponse {
@@ -31,6 +31,7 @@ export interface AudioGenerationResponse {
   confidence?: number;
   method?: 'gpt-vision' | 'ocr' | 'waveform' | 'manual';
   source?: string;
+  analysis?: string; // Enhanced GPT analysis details
 }
 
 // Payment types

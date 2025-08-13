@@ -128,7 +128,7 @@ Respond in JSON format:
         confidence: result.confidence || 0.5,
         analysis: result.analysis || 'GPT analysis completed'
       };
-    } catch (parseError) {
+    } catch {
       // If JSON parsing fails, try to extract BPM from text
       const bpmMatch = content.match(/(\d{3})\s*(?:BPM|bpm|beats?)/i);
       const bpm = bpmMatch ? parseInt(bpmMatch[1]) : 140;

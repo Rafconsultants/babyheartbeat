@@ -5,7 +5,7 @@ import ImageUpload from '@/components/ImageUpload'
 import ProcessingStatus from '@/components/ProcessingStatus'
 import AudioPlayer from '@/components/AudioPlayer'
 import { ProcessingState, AudioGenerationResponse } from '@/types'
-import { BPMDetector } from '@/lib/bpm-detection' // Updated import
+import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer' // Updated import
 import { AudioGenerator } from '@/lib/audio-generator' // Updated import
 
 export default function Home() {
@@ -28,28 +28,29 @@ export default function Home() {
         progress: 20
       })
 
-      // Real BPM detection using GPT-4 Vision API
-      const bpmResult = await BPMDetector.detectBPM(file)
-      console.log('GPT-4 Vision BPM Detection Result:', bpmResult)
+      // Enhanced GPT-4 Vision analysis with detailed audio characteristics
+      const gptAnalysis = await GPTUltrasoundAnalyzer.analyzeUltrasound(file)
+      console.log('Enhanced GPT-4 Vision Analysis:', gptAnalysis)
 
-      // Step 2: Generate audio based on GPT-4 analysis
+      // Step 2: Generate audio based on detailed GPT analysis
       setProcessingState({
         isProcessing: true,
         step: 'generating',
         progress: 70
       })
 
-      // Generate realistic heartbeat audio using GPT analysis
-      const audioUrl = await AudioGenerator.generateSimpleHeartbeat(bpmResult.bpm, 8, bpmResult.analysis)
+      // Generate realistic heartbeat audio using detailed GPT analysis
+      const audioUrl = await AudioGenerator.generateSimpleHeartbeat(gptAnalysis.bpm, 8, gptAnalysis)
 
-      // Create the result with GPT analysis
+      // Create the result with enhanced GPT analysis
       const finalResult: AudioGenerationResponse = {
         audioUrl: audioUrl,
-        bpm: bpmResult.bpm,
+        bpm: gptAnalysis.bpm,
         isWatermarked: true, // For now, all generated audio is watermarked
-        confidence: bpmResult.confidence,
-        method: bpmResult.method,
-        source: bpmResult.source
+        confidence: gptAnalysis.confidence,
+        method: 'gpt-vision',
+        source: 'Enhanced GPT-4 Vision analysis with audio characteristics',
+        analysis: gptAnalysis.analysis // Pass detailed GPT analysis to result
       }
 
       setResult(finalResult)
@@ -94,18 +95,20 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-blue-50">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <svg className="h-8 w-8 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
+                <div className="w-10 h-10 bg-pink-600 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                  </svg>
+                </div>
               </div>
               <div className="ml-3">
                 <h1 className="text-2xl font-bold text-gray-900">Baby Heartbeat Audio</h1>
-                <p className="text-sm text-gray-500">Convert ultrasound images to heartbeat sounds</p>
+                <p className="text-sm text-gray-500">AI-Powered Ultrasound to Audio Conversion</p>
               </div>
             </div>
           </div>
@@ -116,10 +119,11 @@ export default function Home() {
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Hear Your Baby&apos;s Heartbeat
+            Transform Your Ultrasound Images into Beautiful Heartbeat Audio
           </h2>
           <p className="text-xl text-gray-600 mb-8">
-            Upload your ultrasound image and we&apos;ll create an authentic heartbeat audio using advanced AI analysis
+            Upload your baby&apos;s ultrasound image and our advanced AI will analyze it to create authentic, 
+            realistic heartbeat sounds that capture the magic of your little one&apos;s heartbeat.
           </p>
         </div>
 
@@ -167,7 +171,7 @@ export default function Home() {
               className="max-w-2xl mx-auto" 
             />
 
-            {/* GPT Analysis Info */}
+            {/* Enhanced GPT Analysis Info */}
             <div className="mt-4 max-w-2xl mx-auto">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-center">
@@ -177,7 +181,7 @@ export default function Home() {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">GPT-4 Vision Analysis</h3>
+                    <h3 className="text-sm font-medium text-blue-800">Enhanced GPT-4 Vision Analysis</h3>
                     <p className="text-sm text-blue-700 mt-1">
                       Method: {result.method} • Confidence: {Math.round((result.confidence || 0) * 100)}% • Source: {result.source}
                     </p>
@@ -203,64 +207,58 @@ export default function Home() {
         )}
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        <div className="grid md:grid-cols-3 gap-8 mb-12">
           <div className="text-center">
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">AI-Powered Analysis</h3>
-              <p className="text-gray-600">Advanced GPT-4 Vision technology analyzes your ultrasound images for accurate BPM detection</p>
+            <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
             </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">AI-Powered Analysis</h3>
+            <p className="text-gray-600">Advanced GPT-4 Vision technology analyzes your ultrasound images with incredible precision.</p>
           </div>
           <div className="text-center">
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Authentic Audio</h3>
-              <p className="text-gray-600">Generate realistic ultrasound Doppler heartbeat sounds that match real fetal ultrasound audio</p>
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+              </svg>
             </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Authentic Audio</h3>
+            <p className="text-gray-600">Generate realistic Doppler-style heartbeat sounds that match real ultrasound audio.</p>
           </div>
           <div className="text-center">
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Instant Download</h3>
-              <p className="text-gray-600">Download your personalized heartbeat audio file in high-quality WAV format</p>
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
             </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Instant Download</h3>
+            <p className="text-gray-600">Download your generated heartbeat audio in high-quality WAV format for keepsakes.</p>
           </div>
         </div>
 
         {/* How It Works */}
-        <div className="bg-white rounded-lg shadow-sm p-8">
+        <div className="bg-white rounded-lg shadow-lg p-8">
           <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">How It Works</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-4 gap-6">
             <div className="text-center">
-              <div className="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 font-bold">1</div>
+              <div className="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">1</div>
               <h4 className="font-semibold text-gray-900 mb-2">Upload Image</h4>
-              <p className="text-sm text-gray-600">Upload your ultrasound image containing the heartbeat waveform</p>
+              <p className="text-sm text-gray-600">Upload your ultrasound image (JPEG or PNG format)</p>
             </div>
             <div className="text-center">
-              <div className="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 font-bold">2</div>
+              <div className="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">2</div>
               <h4 className="font-semibold text-gray-900 mb-2">AI Analysis</h4>
-              <p className="text-sm text-gray-600">GPT-4 Vision analyzes the image to detect BPM and waveform characteristics</p>
+              <p className="text-sm text-gray-600">GPT-4 Vision analyzes the image for BPM and audio characteristics</p>
             </div>
             <div className="text-center">
-              <div className="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 font-bold">3</div>
+              <div className="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">3</div>
               <h4 className="font-semibold text-gray-900 mb-2">Generate Audio</h4>
-              <p className="text-sm text-gray-600">Create authentic ultrasound heartbeat audio based on the analysis</p>
+              <p className="text-sm text-gray-600">Create authentic ultrasound heartbeat sounds based on analysis</p>
             </div>
             <div className="text-center">
-              <div className="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 font-bold">4</div>
-              <h4 className="font-semibold text-gray-900 mb-2">Download</h4>
+              <div className="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">4</div>
+              <h4 className="font-semibold text-gray-900 mb-2">Download & Share</h4>
               <p className="text-sm text-gray-600">Download your personalized heartbeat audio file</p>
             </div>
           </div>
@@ -271,7 +269,7 @@ export default function Home() {
       <footer className="bg-gray-50 border-t border-gray-200 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <p className="text-gray-500">&copy; 2024 Baby Heartbeat Audio. All rights reserved.</p>
+            <p className="text-gray-600">&copy; 2024 Baby Heartbeat Audio Platform. Created with ❤️ for expecting parents.</p>
           </div>
         </div>
       </footer>
