@@ -62,9 +62,9 @@ export default function Home() {
         progress: 70
       })
 
-      // Generate realistic heartbeat audio using detailed GPT analysis
-      console.log('🚀 Calling AudioGenerator.generateSimpleHeartbeat...');
-      const audioUrl = await AudioGenerator.generateSimpleHeartbeat(gptAnalysis.bpm, 8, gptAnalysis)
+      // Generate authentic fetal Doppler ultrasound heartbeat audio using GPT-4 Vision analysis
+      console.log('🚀 Calling AudioGenerator.generateFetalDopplerHeartbeat...');
+      const audioUrl = await AudioGenerator.generateFetalDopplerHeartbeat(gptAnalysis.bpm, 8, gptAnalysis)
       console.log('🚀 Audio generation completed, URL:', audioUrl);
 
       // Create the result with enhanced GPT analysis
@@ -135,8 +135,8 @@ export default function Home() {
                 </div>
               </div>
               <div className="ml-3">
-                <h1 className="text-2xl font-bold text-gray-900">Baby Heartbeat Audio</h1>
-                <p className="text-sm text-gray-500">AI-Powered Ultrasound to Audio Conversion</p>
+                <h1 className="text-2xl font-bold text-gray-900">Ultrasound to Heartbeat Audio</h1>
+                <p className="text-sm text-gray-500">GPT-4 Vision Powered Fetal Doppler Ultrasound</p>
               </div>
             </div>
           </div>
@@ -147,11 +147,10 @@ export default function Home() {
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Transform Your Ultrasound Images into Beautiful Heartbeat Audio
+            Authentic Fetal Doppler Ultrasound
           </h2>
-          <p className="text-xl text-gray-600 mb-8">
-            Upload your baby&apos;s ultrasound image and our advanced AI will analyze it to create authentic, 
-            realistic heartbeat sounds that capture the magic of your little one&apos;s heartbeat.
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Upload your ultrasound image and let GPT-4 Vision create authentic fetal heartbeat sounds with the characteristic "THUMP-tap" pattern, soft and muffled like it's coming from inside the body.
           </p>
         </div>
 
@@ -235,15 +234,15 @@ export default function Home() {
         )}
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
           <div className="text-center">
             <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">AI-Powered Analysis</h3>
-            <p className="text-gray-600">Advanced GPT-4 Vision technology analyzes your ultrasound images with incredible precision.</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">GPT-4 Vision Analysis</h3>
+            <p className="text-gray-600">Advanced AI analyzes your ultrasound image to detect BPM and extract detailed audio characteristics for authentic sound generation.</p>
           </div>
           <div className="text-center">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -251,17 +250,17 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Authentic Audio</h3>
-            <p className="text-gray-600">Generate realistic Doppler-style heartbeat sounds that match real ultrasound audio.</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Authentic THUMP-tap Pattern</h3>
+            <p className="text-gray-600">Creates the characteristic fetal Doppler ultrasound sound with deep "THUMP" followed by soft "tap", muffled and warm like it's coming from inside the body.</p>
           </div>
           <div className="text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Instant Download</h3>
-            <p className="text-gray-600">Download your generated heartbeat audio in high-quality WAV format for keepsakes.</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Precise BPM Matching</h3>
+            <p className="text-gray-600">Generates heartbeat audio that perfectly matches the detected BPM (110-160 range) with authentic timing and rhythm variations.</p>
           </div>
         </div>
 

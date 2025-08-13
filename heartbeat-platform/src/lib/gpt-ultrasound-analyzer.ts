@@ -23,18 +23,18 @@ export interface UltrasoundAnalysis {
 
 export class GPTUltrasoundAnalyzer {
   private static readonly GPT_API_URL = 'https://api.openai.com/v1/chat/completions';
-  private static readonly GPT_MODEL = 'gpt-3.5-turbo';
+  private static readonly GPT_MODEL = 'gpt-4-vision-preview'; // Use GPT-4 Vision for better analysis
 
   /**
    * Analyze ultrasound image with GPT-4 Vision and get detailed audio characteristics
    */
   static async analyzeUltrasound(imageFile: File): Promise<UltrasoundAnalysis> {
-    console.log('🔍 Starting ultrasound analysis for file:', imageFile.name, 'Size:', imageFile.size);
-    
+    console.log('🔍 Starting GPT-4 Vision ultrasound analysis for file:', imageFile.name, 'Size:', imageFile.size);
+
     try {
       const base64Image = await this.fileToBase64(imageFile);
       console.log('🔍 Image converted to base64, length:', base64Image.length);
-      
+
       // In browser environment, we need to use NEXT_PUBLIC_ prefix
       const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
 
@@ -44,36 +44,45 @@ export class GPTUltrasoundAnalyzer {
 
       console.log('🔍 API key found, length:', apiKey.length);
 
-      const prompt = `Analyze this fetal ultrasound image and extract the following information:
+      const prompt = `Analyze this fetal ultrasound image and provide detailed audio characteristics for heartbeat generation:
 
-1. Look for any text that shows heart rate or BPM (like "FHR 155bpm", "HR 140", "BPM 150", etc.)
-2. If you find a heart rate, extract the exact number
-3. Analyze the image quality and characteristics
+1. **BPM Detection**: Look for any text showing heart rate or BPM (like "FHR 155bpm", "HR 140", "BPM 150", etc.) and extract the exact number.
+
+2. **Image Analysis**: Analyze the image quality, clarity, and characteristics that would affect audio generation.
+
+3. **Audio Characteristics**: Based on the image analysis, determine:
+   - Systolic intensity (0-1): How strong the first "lub" sound should be
+   - Diastolic intensity (0-1): How strong the second "dub" sound should be
+   - Frequency ranges for both systolic and diastolic sounds
+   - Rhythm pattern (regular/irregular/variable)
+   - Clarity level (clear/moderate/faint)
+   - Background noise level (low/medium/high)
+   - Doppler effect strength (strong/moderate/weak)
 
 Respond in this exact JSON format:
 {
   "bpm": number (the heart rate you found, or 140 if not found),
   "confidence": number (0-1, how confident you are in the BPM),
   "audioCharacteristics": {
-    "systolicIntensity": 0.8,
-    "diastolicIntensity": 0.6,
+    "systolicIntensity": number (0-1),
+    "diastolicIntensity": number (0-1),
     "frequencyRange": {
-      "systolic": {"min": 900, "max": 1100},
-      "diastolic": {"min": 650, "max": 800}
+      "systolic": {"min": number, "max": number},
+      "diastolic": {"min": number, "max": number}
     },
-    "rhythm": "regular",
-    "clarity": "moderate",
-    "backgroundNoise": "medium",
-    "dopplerEffect": "moderate"
+    "rhythm": "regular" | "irregular" | "variable",
+    "clarity": "clear" | "moderate" | "faint",
+    "backgroundNoise": "low" | "medium" | "high",
+    "dopplerEffect": "strong" | "moderate" | "weak"
   },
-  "analysis": "description of what you found",
-  "recommendations": ["use standard fetal heartbeat characteristics"]
+  "analysis": "detailed description of what you found and why you chose these audio characteristics",
+  "recommendations": ["specific audio generation recommendations based on the analysis"]
 }
 
-If you cannot determine specific values, provide reasonable estimates based on typical fetal heart characteristics.`;
+Provide realistic values based on typical fetal heart characteristics and the image quality you observe.`;
 
-      console.log('🔍 Making API request to OpenAI...');
-      
+      console.log('🔍 Making API request to GPT-4 Vision...');
+
       const response = await fetch(this.GPT_API_URL, {
         method: 'POST',
         headers: {
@@ -99,7 +108,7 @@ If you cannot determine specific values, provide reasonable estimates based on t
               ]
             }
           ],
-          max_tokens: 1000,
+          max_tokens: 1500,
           temperature: 0.1
         })
       });
@@ -114,7 +123,7 @@ If you cannot determine specific values, provide reasonable estimates based on t
 
       const data = await response.json();
       console.log('🔍 API response data:', data);
-      
+
       const content = data.choices[0]?.message?.content;
       console.log('🔍 API response content:', content);
 
@@ -171,7 +180,7 @@ If you cannot determine specific values, provide reasonable estimates based on t
         backgroundNoise: (audioChars.backgroundNoise as 'low' | 'medium' | 'high') || 'medium',
         dopplerEffect: (audioChars.dopplerEffect as 'strong' | 'moderate' | 'weak') || 'moderate'
       },
-      analysis: (result.analysis as string) || 'GPT analysis completed',
+      analysis: (result.analysis as string) || 'GPT-4 Vision analysis completed',
       recommendations: Array.isArray(result.recommendations) ? (result.recommendations as string[]) : ['Use moderate intensity for authentic sound']
     };
   }
@@ -204,59 +213,6 @@ If you cannot determine specific values, provide reasonable estimates based on t
   }
 
   /**
-   * Fallback OCR method to detect BPM from image text
-   */
-  private static async fallbackOCRDetection(imageFile: File): Promise<UltrasoundAnalysis> {
-    try {
-      // Create a canvas to analyze the image
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      return new Promise((resolve) => {
-        img.onload = () => {
-          canvas.width = img.width;
-          canvas.height = img.height;
-          ctx?.drawImage(img, 0, 0);
-          
-          // Simple text detection - look for common patterns
-          const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
-          if (!imageData) {
-            resolve(this.getDefaultAnalysis());
-            return;
-          }
-          
-          // For now, return a reasonable default based on typical fetal heart rates
-          // In a real implementation, you'd use a proper OCR library
-          resolve({
-            bpm: 155, // Default based on typical fetal heart rate
-            confidence: 0.7,
-            audioCharacteristics: {
-              systolicIntensity: 0.8,
-              diastolicIntensity: 0.6,
-              frequencyRange: {
-                systolic: { min: 900, max: 1100 },
-                diastolic: { min: 650, max: 800 }
-              },
-              rhythm: 'regular',
-              clarity: 'moderate',
-              backgroundNoise: 'medium',
-              dopplerEffect: 'moderate'
-            },
-            analysis: 'Fallback analysis: Using typical fetal heart rate characteristics',
-            recommendations: ['Use standard fetal heartbeat characteristics']
-          });
-        };
-        
-        img.src = URL.createObjectURL(imageFile);
-      });
-    } catch (error) {
-      console.error('Fallback OCR failed:', error);
-      return this.getDefaultAnalysis();
-    }
-  }
-
-  /**
    * Get default analysis when GPT fails
    */
   private static getDefaultAnalysis(): UltrasoundAnalysis {
@@ -278,6 +234,59 @@ If you cannot determine specific values, provide reasonable estimates based on t
       analysis: 'Default analysis due to GPT failure',
       recommendations: ['Use standard fetal heartbeat characteristics']
     };
+  }
+
+  /**
+   * Fallback OCR method to detect BPM from image text
+   */
+  private static async fallbackOCRDetection(imageFile: File): Promise<UltrasoundAnalysis> {
+    try {
+      // Create a canvas to analyze the image
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      return new Promise((resolve) => {
+        img.onload = () => {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx?.drawImage(img, 0, 0);
+
+          // Simple text detection - look for common patterns
+          const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
+          if (!imageData) {
+            resolve(this.getDefaultAnalysis());
+            return;
+          }
+
+          // For now, return a reasonable default based on typical fetal heart rates
+          // In a real implementation, you'd use a proper OCR library
+          resolve({
+            bpm: 155, // Default based on typical fetal heart rate
+            confidence: 0.7,
+            audioCharacteristics: {
+              systolicIntensity: 0.8,
+              diastolicIntensity: 0.6,
+              frequencyRange: {
+                systolic: { min: 900, max: 1100 },
+                diastolic: { min: 650, max: 800 }
+              },
+              rhythm: 'regular',
+              clarity: 'moderate',
+              backgroundNoise: 'medium',
+              dopplerEffect: 'moderate'
+            },
+            analysis: 'Fallback analysis: Using typical fetal heart rate characteristics',
+            recommendations: ['Use standard fetal heartbeat characteristics']
+          });
+        };
+
+        img.src = URL.createObjectURL(imageFile);
+      });
+    } catch (error) {
+      console.error('Fallback OCR failed:', error);
+      return this.getDefaultAnalysis();
+    }
   }
 
   /**
