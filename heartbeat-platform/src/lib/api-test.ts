@@ -1,13 +1,19 @@
 // API Test - Verify OpenAI API integration
 export async function testOpenAIAPI() {
   try {
-    const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+    // In browser environment, we need to use NEXT_PUBLIC_ prefix
+    const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+    
+    console.log('🔍 Checking API key...');
+    console.log('Environment variable exists:', !!apiKey);
+    console.log('API key length:', apiKey ? apiKey.length : 0);
     
     if (!apiKey) {
-      throw new Error('OpenAI API key not found in environment variables');
+      throw new Error('OpenAI API key not found. Please check your .env.local file.');
     }
 
     console.log('✅ API Key found:', apiKey.substring(0, 20) + '...');
+    console.log('🔍 Making API request...');
     
     // Test API connectivity with a simple text request
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -29,8 +35,13 @@ export async function testOpenAIAPI() {
       })
     });
 
+    console.log('🔍 Response status:', response.status);
+    console.log('🔍 Response ok:', response.ok);
+
     if (!response.ok) {
-      throw new Error(`API test failed: ${response.status} ${response.statusText}`);
+      const errorData = await response.text();
+      console.error('❌ API Error Response:', errorData);
+      throw new Error(`API test failed: ${response.status} ${response.statusText} - ${errorData}`);
     }
 
     const data = await response.json();

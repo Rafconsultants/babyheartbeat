@@ -31,10 +31,11 @@ export class GPTUltrasoundAnalyzer {
   static async analyzeUltrasound(imageFile: File): Promise<UltrasoundAnalysis> {
     try {
       const base64Image = await this.fileToBase64(imageFile);
-      const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+      // In browser environment, we need to use NEXT_PUBLIC_ prefix
+      const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
 
       if (!apiKey) {
-        throw new Error('OpenAI API key not found');
+        throw new Error('OpenAI API key not found. Please check your .env.local file.');
       }
 
       const prompt = `Analyze this fetal ultrasound image with extreme detail for heartbeat audio recreation.
