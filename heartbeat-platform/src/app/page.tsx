@@ -27,7 +27,8 @@ export default function Home() {
         setApiStatus(success ? 'available' : 'unavailable')
       } catch (error) {
         console.error('API check failed:', error)
-        setApiStatus('unavailable')
+        // Don't block the app if API check fails
+        setApiStatus('available') // Assume available and let individual operations handle errors
       }
     }
     
@@ -37,12 +38,6 @@ export default function Home() {
   const handleImageSelect = async (file: File) => {
     setError(null)
     setResult(null)
-    
-    // Check API availability before processing
-    if (apiStatus === 'unavailable') {
-      setError('Service temporarily unavailable. Please try again later.')
-      return
-    }
     
     try {
       // Step 1: Upload and analyze image with GPT-4 Vision
