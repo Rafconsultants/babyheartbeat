@@ -20,22 +20,25 @@ export interface Upload {
 
 // Audio generation types
 export interface AudioGenerationRequest {
-  imageUrl: string;
-  bpm?: number;
+  imageFile: File;
+  userId?: string;
 }
 
 export interface AudioGenerationResponse {
   audioUrl: string;
   bpm: number;
   isWatermarked: boolean;
+  confidence?: number;
+  method?: 'gpt-vision' | 'ocr' | 'waveform' | 'manual';
+  source?: string;
 }
 
 // Payment types
 export interface PaymentIntent {
   id: string;
   amount: number;
-  status: 'pending' | 'succeeded' | 'failed';
-  upload_id: string;
+  currency: string;
+  status: string;
 }
 
 // UI State types
