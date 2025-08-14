@@ -560,11 +560,12 @@ export class AudioGenerator {
 
   /**
    * Generate authentic fetal Doppler ultrasound heartbeat sound
-   * Creates the characteristic "THUMP-tap" pattern with soft, muffled quality
+   * Creates the characteristic "THUMP-tap" pattern with warm, fluid-like quality
    * like it's coming from inside the body (110-160 BPM range)
+   * Emulates real OB-GYN Doppler scans with natural, non-electronic tones
    */
   static async generateFetalDopplerHeartbeat(bpm: number, duration: number = 8, gptAnalysis?: UltrasoundAnalysis): Promise<string> {
-    console.log('🎵 Generating fetal Doppler heartbeat with BPM:', bpm, 'Duration:', duration);
+    console.log('🎵 Generating authentic OB-GYN fetal Doppler heartbeat with BPM:', bpm, 'Duration:', duration);
     console.log('🎵 GPT Analysis:', gptAnalysis);
 
     try {
@@ -581,10 +582,10 @@ export class AudioGenerator {
         totalBeats: Math.floor(duration * beatsPerSecond)
       });
 
-      // Use GPT analysis for precise characteristics, with fetal-specific defaults
+      // Use GPT analysis for precise characteristics, with authentic OB-GYN defaults
       const characteristics = gptAnalysis?.audioCharacteristics || {
-        systolicIntensity: 0.7,
-        diastolicIntensity: 0.4,
+        systolicIntensity: 0.75,
+        diastolicIntensity: 0.35,
         frequencyRange: {
           systolic: { min: 800, max: 1000 },
           diastolic: { min: 600, max: 750 }
@@ -595,118 +596,136 @@ export class AudioGenerator {
         dopplerEffect: 'moderate' as const
       };
 
-      console.log('🎵 Using fetal Doppler characteristics:', characteristics);
+      console.log('🎵 Using authentic OB-GYN Doppler characteristics:', characteristics);
 
       for (let time = 0; time < duration; time += beatInterval) {
         const startSample = Math.floor(time * sampleRate);
-        const beatEnd = Math.floor((time + 0.7) * sampleRate); // Beat duration 0.7s for fetal pattern
+        const beatEnd = Math.floor((time + 0.65) * sampleRate); // Optimized beat duration for natural flow
 
-        // Apply rhythm variations based on GPT analysis
+        // Apply subtle rhythm variations based on GPT analysis
         let rhythmVariation = 1.0;
         if (characteristics.rhythm === 'irregular') {
-          rhythmVariation = 0.85 + Math.random() * 0.3; // 0.85-1.15 variation
+          rhythmVariation = 0.88 + Math.random() * 0.24; // 0.88-1.12 variation
         } else if (characteristics.rhythm === 'variable') {
-          rhythmVariation = 0.92 + Math.random() * 0.16; // 0.92-1.08 variation
+          rhythmVariation = 0.94 + Math.random() * 0.12; // 0.94-1.06 variation
         }
 
-        // Create authentic fetal "THUMP-tap" pattern
+        // Create authentic fetal "THUMP-tap" pattern with natural, fluid-like quality
         for (let i = startSample; i < beatEnd && i < channelData.length; i++) {
           const t = (i - startSample) / sampleRate;
-          const decay = Math.exp(-t * 6); // Softer decay for muffled sound
+          const decay = Math.exp(-t * 7); // Natural decay for warm, fluid sound
 
-          // "THUMP" - Deep, muffled first sound (systolic)
-          if (t < 0.12 * rhythmVariation) {
-            // Lower frequencies for the deep "THUMP" sound
-            const thumpFreq = 45 + Math.sin(t * Math.PI * 1.5) * 15; // 30-60 Hz range
-            const thump = Math.sin(t * thumpFreq * 2 * Math.PI) * decay * characteristics.systolicIntensity * 0.8;
+          // "THUMP" - Deep, fuller first sound (systolic) with natural warmth
+          if (t < 0.09 * rhythmVariation) {
+            // Lower, warmer frequencies for the deep "THUMP" sound
+            const thumpFreq = 32 + Math.sin(t * Math.PI * 1.8) * 18; // 14-50 Hz range for natural warmth
+            const thump = Math.sin(t * thumpFreq * 2 * Math.PI) * decay * characteristics.systolicIntensity;
             
-            // Add harmonics for richness but keep it muffled
-            const harmonic1 = Math.sin(t * thumpFreq * 2 * 2 * Math.PI) * decay * characteristics.systolicIntensity * 0.3;
-            const harmonic2 = Math.sin(t * thumpFreq * 3 * 2 * Math.PI) * decay * characteristics.systolicIntensity * 0.15;
+            // Add natural harmonics for warmth and fullness
+            const harmonic1 = Math.sin(t * thumpFreq * 2 * 2 * Math.PI) * decay * characteristics.systolicIntensity * 0.45;
+            const harmonic2 = Math.sin(t * thumpFreq * 3 * 2 * Math.PI) * decay * characteristics.systolicIntensity * 0.25;
+            const harmonic3 = Math.sin(t * thumpFreq * 4 * 2 * Math.PI) * decay * characteristics.systolicIntensity * 0.12;
             
-            // Add subtle modulation for natural sound
+            // Add natural modulation for organic sound
             const modulation = Math.sin(t * 12 * 2 * Math.PI) * 0.08;
             
-            // Apply muffling effect (low-pass filter simulation)
-            const muffledThump = (thump + harmonic1 + harmonic2) * (1 + modulation) * 0.7;
+            // Apply warm, natural muffling effect
+            const warmThump = (thump + harmonic1 + harmonic2 + harmonic3) * (1 + modulation) * 0.75;
             
-            channelData[i] = muffledThump;
+            channelData[i] = warmThump;
           }
-          // Brief pause between THUMP and tap
-          else if (t < 0.18 * rhythmVariation) {
+          // Brief natural pause between THUMP and tap
+          else if (t < 0.13 * rhythmVariation) {
             channelData[i] = 0;
           }
-          // "tap" - Softer, higher-pitched second sound (diastolic)
-          else if (t < 0.35 * rhythmVariation) {
-            // Higher frequencies for the soft "tap" sound
-            const tapFreq = 180 + Math.sin((t - 0.18) * Math.PI * 2) * 60; // 120-240 Hz range
-            const tap = Math.sin((t - 0.18) * tapFreq * 2 * Math.PI) * decay * characteristics.diastolicIntensity * 0.6;
+          // "tap" - Softer, lighter second sound (diastolic) with natural flow
+          else if (t < 0.28 * rhythmVariation) {
+            // Higher frequencies for the soft "tap" sound with natural flow
+            const tapFreq = 180 + Math.sin((t - 0.13) * Math.PI * 2.2) * 70; // 110-250 Hz range
+            const tap = Math.sin((t - 0.13) * tapFreq * 2 * Math.PI) * decay * characteristics.diastolicIntensity * 0.35;
             
-            // Add harmonics for the tap
-            const harmonic1 = Math.sin((t - 0.18) * tapFreq * 2 * 2 * Math.PI) * decay * characteristics.diastolicIntensity * 0.2;
-            const harmonic2 = Math.sin((t - 0.18) * tapFreq * 3 * 2 * Math.PI) * decay * characteristics.diastolicIntensity * 0.1;
+            // Add natural harmonics for the tap
+            const harmonic1 = Math.sin((t - 0.13) * tapFreq * 2 * 2 * Math.PI) * decay * characteristics.diastolicIntensity * 0.12;
+            const harmonic2 = Math.sin((t - 0.13) * tapFreq * 3 * 2 * Math.PI) * decay * characteristics.diastolicIntensity * 0.06;
             
-            // Apply muffling effect
-            const muffledTap = (tap + harmonic1 + harmonic2) * 0.5;
+            // Apply natural muffling for soft, warm sound
+            const warmTap = (tap + harmonic1 + harmonic2) * 0.35;
             
-            channelData[i] = muffledTap;
+            channelData[i] = warmTap;
           }
-          // Rest period with subtle background
-          else if (t < 0.7) {
-            // Add very subtle background "body cavity" resonance
-            const bodyResonance = Math.sin(t * 25 * 2 * Math.PI) * 0.02 * decay;
-            channelData[i] = bodyResonance;
+          // Rest period with enhanced natural amniotic fluid effects
+          else if (t < 0.65) {
+            // Add natural "amniotic fluid" resonance and whooshing
+            const amnioticResonance = Math.sin(t * 28 * 2 * Math.PI) * 0.025 * decay;
+            const whooshEffect = Math.sin(t * 42 * 2 * Math.PI) * 0.018 * decay;
+            const bodyTissue = Math.sin(t * 16 * 2 * Math.PI) * 0.012 * decay;
+            
+            channelData[i] = amnioticResonance + whooshEffect + bodyTissue;
           }
         }
 
-        // Add authentic Doppler ultrasound background characteristics
-        this.addFetalDopplerBackground(channelData, startSample, beatEnd, sampleRate, characteristics);
+        // Add authentic OB-GYN Doppler background with natural fluid characteristics
+        this.addAuthenticOBGYNDopplerBackground(channelData, startSample, beatEnd, sampleRate, characteristics);
       }
 
       // Convert to blob
       const wavBuffer = this.createWAVFile(buffer);
       const blob = new Blob([wavBuffer], { type: 'audio/wav' });
 
-      console.log('🎵 Fetal Doppler heartbeat generation completed, blob size:', blob.size, 'bytes');
+      console.log('🎵 Authentic OB-GYN fetal Doppler heartbeat completed, blob size:', blob.size, 'bytes');
       return URL.createObjectURL(blob);
     } catch (error) {
-      console.error('❌ Fetal Doppler generation failed:', error);
+      console.error('❌ Authentic fetal Doppler generation failed:', error);
       // Fallback to demo audio
       return '/demo-heartbeat.mp3';
     }
   }
 
   /**
-   * Add authentic fetal Doppler ultrasound background characteristics
+   * Add authentic OB-GYN Doppler ultrasound background with natural fluid characteristics
    */
-  private static addFetalDopplerBackground(
+  private static addAuthenticOBGYNDopplerBackground(
     channelData: Float32Array,
     startSample: number,
     endSample: number,
     sampleRate: number,
     characteristics: any
   ) {
-    const noiseMultiplier = characteristics.backgroundNoise === 'high' ? 0.015 : 
-                           characteristics.backgroundNoise === 'medium' ? 0.01 : 0.005;
+    const noiseMultiplier = characteristics.backgroundNoise === 'high' ? 0.018 : 
+                           characteristics.backgroundNoise === 'medium' ? 0.012 : 0.006;
 
     for (let i = startSample; i < endSample; i++) {
       if (i >= channelData.length) break;
 
       const time = (i - startSample) / sampleRate;
-      const decay = Math.exp(-time * 2);
+      const decay = Math.exp(-time * 1.8);
 
-      // Authentic Doppler ultrasound background noise
+      // Authentic OB-GYN Doppler ultrasound background noise
       const dopplerNoise1 = (Math.random() - 0.5) * noiseMultiplier * decay;
-      const dopplerNoise2 = Math.sin(time * 15000 * 2 * Math.PI) * noiseMultiplier * 0.3 * decay;
-      const dopplerNoise3 = Math.sin(time * 8000 * 2 * Math.PI) * noiseMultiplier * 0.2 * decay;
+      const dopplerNoise2 = Math.sin(time * 10000 * 2 * Math.PI) * noiseMultiplier * 0.35 * decay;
+      const dopplerNoise3 = Math.sin(time * 5000 * 2 * Math.PI) * noiseMultiplier * 0.25 * decay;
       
-      // Add subtle "body cavity" resonance
-      const bodyCavity = Math.sin(time * 35 * 2 * Math.PI) * noiseMultiplier * 0.4 * decay;
+      // Natural "amniotic fluid" effects
+      const amnioticFluid = Math.sin(time * 35 * 2 * Math.PI) * noiseMultiplier * 0.45 * decay;
+      const amnioticWhoosh = Math.sin(time * 22 * 2 * Math.PI) * noiseMultiplier * 0.28 * decay;
       
-      // Add very low frequency "movement" sounds
-      const movement = Math.sin(time * 8 * 2 * Math.PI) * noiseMultiplier * 0.2 * decay;
+      // Natural body tissue and movement sounds
+      const bodyTissue = Math.sin(time * 10 * 2 * Math.PI) * noiseMultiplier * 0.35 * decay;
+      const movement = Math.sin(time * 5 * 2 * Math.PI) * noiseMultiplier * 0.22 * decay;
+      
+      // Natural echo-like quality through amniotic fluid
+      const echoEffect = Math.sin(time * 48 * 2 * Math.PI) * noiseMultiplier * 0.18 * decay;
+      
+      // Warm, natural muffled quality
+      const warmMuffle = Math.sin(time * 19 * 2 * Math.PI) * noiseMultiplier * 0.32 * decay;
 
-      channelData[i] += dopplerNoise1 + dopplerNoise2 + dopplerNoise3 + bodyCavity + movement;
+      // Natural fluid flow sounds
+      const fluidFlow = Math.sin(time * 15 * 2 * Math.PI) * noiseMultiplier * 0.25 * decay;
+      const gentleWhoosh = Math.sin(time * 32 * 2 * Math.PI) * noiseMultiplier * 0.2 * decay;
+
+      channelData[i] += dopplerNoise1 + dopplerNoise2 + dopplerNoise3 + amnioticFluid + 
+                       amnioticWhoosh + bodyTissue + movement + echoEffect + warmMuffle +
+                       fluidFlow + gentleWhoosh;
     }
   }
 }
