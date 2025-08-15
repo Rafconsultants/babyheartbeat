@@ -557,11 +557,13 @@ export class AudioGenerator {
   }
 
   /**
-   * Generate authentic fetal ultrasound heartbeat sound
-   * Focus on clear heartbeat pattern with minimal background noise
+   * Generate authentic fetal ultrasound heartbeat sound matching YouTube reference exactly
+   * Focus on warm, subtle whoosh with barely audible heartbeat patterns
+   * Reference: https://www.youtube.com/shorts/32JCR69CJvo
    */
   static async generateFetalDopplerHeartbeat(bpm: number, duration: number = 5, gptAnalysis?: UltrasoundAnalysis): Promise<string> {
-    console.log('🎵 Generating authentic fetal ultrasound heartbeat at', bpm, 'BPM for', duration, 'seconds');
+    console.log('🎵 Generating authentic YouTube-reference fetal ultrasound heartbeat at', bpm, 'BPM for', duration, 'seconds');
+    console.log('🎵 Matching exact tonal qualities of: https://www.youtube.com/shorts/32JCR69CJvo');
 
     try {
       // Audio settings
@@ -596,10 +598,10 @@ export class AudioGenerator {
 
       console.log(`🎵 Beat interval: ${beatInterval}s, ${beatSamples} samples, ${totalBeats} total beats`);
 
-      // Generate very subtle background (minimal whoosh)
-      this.generateMinimalBackground(channelData, sampleRate, duration, characteristics);
+      // Generate synchronized Super Saiyan aura background that pulses with heartbeat
+      this.generateYouTubeReferenceBackground(channelData, sampleRate, duration, bpm);
 
-      // Add prominent lub-dub beats
+      // Add very subtle lub-dub beats that blend into the background
       for (let beat = 0; beat < totalBeats; beat++) {
         const beatStart = beat * beatSamples;
         
@@ -608,8 +610,8 @@ export class AudioGenerator {
         const jitterSamples = Math.floor(jitterMs * sampleRate / 1000);
         const adjustedStart = Math.max(0, beatStart + jitterSamples);
         
-        // Generate clear lub-dub pattern
-        this.addClearLubDubBeat(
+        // Generate subtle lub-dub pattern that blends with background
+        this.addSubtleLubDubBeat(
           channelData,
           adjustedStart,
           beatSamples,
@@ -619,19 +621,84 @@ export class AudioGenerator {
         );
       }
 
-      // Apply gentle processing
-      this.applyGentleProcessing(channelData, sampleRate);
+      // Apply final processing to match YouTube reference
+      this.applyYouTubeReferenceProcessing(channelData, sampleRate);
 
       // Convert to WAV
       const wavBlob = this.bufferToWav(buffer, bitDepth);
       const audioUrl = URL.createObjectURL(wavBlob);
 
-      console.log('🎵 Authentic fetal ultrasound heartbeat generated successfully');
+      console.log('🎵 YouTube-reference fetal ultrasound heartbeat generated successfully');
       return audioUrl;
 
     } catch (error) {
       console.error('❌ Error generating fetal ultrasound heartbeat:', error);
       throw new Error('Failed to generate fetal ultrasound heartbeat');
+    }
+  }
+
+  /**
+   * Generate authentic Doppler background with very subtle Super Saiyan aura enhancement
+   * Continuous low hum (80-300 Hz) + synchronized airy wosh (300-800 Hz) felt more than heard
+   */
+  private static generateYouTubeReferenceBackground(
+    channelData: Float32Array,
+    sampleRate: number,
+    duration: number,
+    bpm?: number
+  ) {
+    console.log('✨ Generating authentic Doppler with subtle aura enhancement - felt more than heard');
+    
+    const beatsPerSecond = (bpm || 140) / 60;
+    const beatInterval = 1 / beatsPerSecond;
+    
+    for (let i = 0; i < channelData.length; i++) {
+      const time = i / sampleRate;
+      
+      // Calculate position in current heartbeat cycle (0-1)
+      const beatPhase = (time % beatInterval) / beatInterval;
+      
+      // Synchronized aura intensity - very subtle, felt more than heard
+      let auraIntensity = 0.08; // Minimum presence
+      if (beatPhase < 0.15) {
+        // Whoomp phase - subtle aura enhancement
+        const whoompPhase = beatPhase / 0.15;
+        auraIntensity = 0.08 + (Math.sin(whoompPhase * Math.PI) * 0.12); // Peak at 0.2
+      } else if (beatPhase < 0.25) {
+        // Lub phase - gentle aura support
+        const lubPhase = (beatPhase - 0.15) / 0.1;
+        auraIntensity = 0.15 + (Math.sin(lubPhase * Math.PI) * 0.05); // Around 0.15-0.2
+      } else if (beatPhase < 0.5) {
+        // Fade phase - gentle decrease
+        const fadePhase = (beatPhase - 0.25) / 0.25;
+        auraIntensity = 0.15 * (1 - fadePhase * 0.5); // Fade to 0.075
+      } else {
+        // Rest phase - barely perceptible
+        auraIntensity = 0.075 + (Math.sin((beatPhase - 0.5) * Math.PI * 2) * 0.015); // 0.06-0.09
+      }
+      
+      // CONTINUOUS subtle hum - warm, low (80-300 Hz) - always present but gentle
+      const subtleHum1 = Math.sin(2 * Math.PI * 90 * time + Math.sin(time * 0.7) * 0.15) * 0.015;
+      const subtleHum2 = Math.sin(2 * Math.PI * 150 * time + Math.sin(time * 0.9) * 0.2) * 0.012;
+      const subtleHum3 = Math.sin(2 * Math.PI * 220 * time + Math.sin(time * 0.5) * 0.1) * 0.010;
+      const subtleHum4 = Math.sin(2 * Math.PI * 280 * time + Math.sin(time * 1.1) * 0.18) * 0.008;
+      
+      // SYNCHRONIZED airy wosh - mid range (300-800 Hz) - timed with heartbeat
+      const airyWosh1 = Math.sin(2 * Math.PI * 350 * time + Math.sin(time * 1.8) * 0.4) * 0.012 * auraIntensity;
+      const airyWosh2 = Math.sin(2 * Math.PI * 480 * time + Math.sin(time * 1.4) * 0.5) * 0.010 * auraIntensity;
+      const airyWosh3 = Math.sin(2 * Math.PI * 620 * time + Math.sin(time * 2.0) * 0.3) * 0.008 * auraIntensity;
+      const airyWosh4 = Math.sin(2 * Math.PI * 750 * time + Math.sin(time * 1.6) * 0.6) * 0.006 * auraIntensity;
+      
+      // Natural Doppler background - authentic amniotic fluid movement
+      const naturalWhoosh = Math.sin(2 * Math.PI * 45 * time + Math.sin(time * 0.6) * 0.1) * 0.008;
+      const bodyResonance = Math.sin(2 * Math.PI * 35 * time + Math.sin(time * 0.5) * 0.05) * 0.006;
+      
+      // Very gentle organic variation
+      const organicNoise = (Math.random() - 0.5) * 0.003;
+      
+      channelData[i] = subtleHum1 + subtleHum2 + subtleHum3 + subtleHum4 + 
+                      airyWosh1 + airyWosh2 + airyWosh3 + airyWosh4 +
+                      naturalWhoosh + bodyResonance + organicNoise;
     }
   }
 
@@ -663,6 +730,50 @@ export class AudioGenerator {
       
       channelData[i] = lowHum + swish + noise;
     }
+  }
+
+  /**
+   * Add authentic Doppler whoomp-lub double-pulse pattern
+   * Creates the characteristic double-pulse: deeper 'whoomp' + lighter 'lub'
+   */
+  private static addSubtleLubDubBeat(
+    channelData: Float32Array,
+    startSample: number,
+    beatSamples: number,
+    sampleRate: number,
+    characteristics: any,
+    beatIndex: number
+  ) {
+    // Authentic Doppler timing: whoomp immediately followed by lub
+    const whoompDuration = Math.floor(beatSamples * 0.25); // 25% for deeper whoomp
+    const lubDuration = Math.floor(beatSamples * 0.15); // 15% for lighter lub
+    const shortPause = Math.floor(beatSamples * 0.03); // Very short pause between whoomp-lub
+    
+    const whoompStart = startSample;
+    const lubStart = whoompStart + whoompDuration + shortPause;
+    
+    // Natural variation for authentic Doppler recording
+    const intensityVariation = 1.0 + (Math.random() - 0.5) * 0.2; // ±10%
+    
+    // Generate authentic deep 'whoomp' - natural Doppler recording
+    this.addDopplerWhoompSound(
+      channelData,
+      whoompStart,
+      whoompDuration,
+      sampleRate,
+      characteristics.systolicIntensity * intensityVariation * 0.65, // Natural fetal heartbeat strength
+      characteristics.frequencyRange.systolic
+    );
+    
+    // Generate soft, airy 'lub' - authentic secondary pulse
+    this.addDopplerLubSound(
+      channelData,
+      lubStart,
+      lubDuration,
+      sampleRate,
+      characteristics.diastolicIntensity * intensityVariation * 0.45, // Natural secondary pulse
+      characteristics.frequencyRange.diastolic
+    );
   }
 
   /**
@@ -766,6 +877,132 @@ export class AudioGenerator {
       
       // Add to existing background (more prominent)
       channelData[sampleIndex] += (dub + harmonic1 + harmonic2) * 0.7;
+    }
+  }
+
+  /**
+   * Add deeper, rounded 'whoomp' sound with ethereal aura quality
+   * Creates the characteristic deeper pulse with Super Saiyan-like fluid resonance
+   */
+  private static addDopplerWhoompSound(
+    channelData: Float32Array,
+    startSample: number,
+    duration: number,
+    sampleRate: number,
+    intensity: number,
+    frequencyRange: { min: number; max: number }
+  ) {
+    for (let i = 0; i < duration; i++) {
+      const sampleIndex = startSample + i;
+      if (sampleIndex >= channelData.length) break;
+      
+      const time = i / sampleRate;
+      const decay = Math.exp(-time * 3.5); // Gentler decay for more organic feel
+      
+      // Create authentic deep whoomp - like real Doppler recording (60-150 Hz range)
+      const fundamental = 60 + Math.sin(time * Math.PI * 1.8) * 45; // 60-105 Hz base, can reach 150 Hz
+      const whoomp = Math.sin(2 * Math.PI * fundamental * time) * decay * intensity;
+      
+      // Natural harmonics - warm, muffled through amniotic fluid
+      const naturalHarmonic1 = Math.sin(2 * Math.PI * (fundamental * 1.3) * time + Math.sin(time * 1.5) * 0.2) * decay * intensity * 0.4;
+      const naturalHarmonic2 = Math.sin(2 * Math.PI * (fundamental * 0.7) * time + Math.sin(time * 1.2) * 0.15) * decay * intensity * 0.3;
+      
+      // Fluid resonance - muffled through body tissue and amniotic fluid
+      const fluidResonance = Math.sin(2 * Math.PI * (fundamental * 0.8) * time) * decay * intensity * 0.45;
+      
+      // Soft organic texture - natural variation
+      const organicTexture = Math.sin(2 * Math.PI * (fundamental + Math.sin(time * 1.8) * 3) * time) * decay * intensity * 0.25;
+      
+      // Warm body warmth - intimate, protected feeling
+      const bodyWarmth = Math.sin(2 * Math.PI * (fundamental * 0.9) * time) * decay * intensity * 0.35;
+      
+      // Combine for authentic, muffled whoomp - like real Doppler recording
+      channelData[sampleIndex] += (whoomp + naturalHarmonic1 + naturalHarmonic2 + fluidResonance + 
+                                   organicTexture + bodyWarmth) * 0.7;
+    }
+  }
+
+  /**
+   * Add softer 'lub' sound with ethereal resonance
+   * Creates the characteristic lighter pulse that harmonizes with the aural background
+   */
+  private static addDopplerLubSound(
+    channelData: Float32Array,
+    startSample: number,
+    duration: number,
+    sampleRate: number,
+    intensity: number,
+    frequencyRange: { min: number; max: number }
+  ) {
+    for (let i = 0; i < duration; i++) {
+      const sampleIndex = startSample + i;
+      if (sampleIndex >= channelData.length) break;
+      
+      const time = i / sampleRate;
+      const decay = Math.exp(-time * 6); // Gentle decay for soft texture
+      
+      // Create softer, airy 'lub' - authentic Doppler mid-range (80-200 Hz range)
+      const fundamental = 80 + Math.sin(time * Math.PI * 2.2) * 50; // 80-130 Hz base, can reach 200 Hz
+      const lub = Math.sin(2 * Math.PI * fundamental * time) * decay * intensity;
+      
+      // Airy harmonics - soft, muffled through amniotic fluid
+      const airyHarmonic1 = Math.sin(2 * Math.PI * (fundamental * 1.4) * time + Math.sin(time * 1.3) * 0.15) * decay * intensity * 0.35;
+      const airyHarmonic2 = Math.sin(2 * Math.PI * (fundamental * 0.8) * time + Math.sin(time * 1.6) * 0.12) * decay * intensity * 0.25;
+      
+      // Fluid-like texture - gentle, soft movement
+      const fluidTexture = Math.sin(2 * Math.PI * (fundamental * 1.1) * time + Math.sin(time * 1.2) * 0.2) * decay * intensity * 0.3;
+      
+      // Soft natural resonance - warm, muffled
+      const naturalResonance = Math.sin(2 * Math.PI * (fundamental * 0.9) * time) * decay * intensity * 0.28;
+      
+      // Combine for authentic, airy 'lub' - soft and muffled like real Doppler
+      channelData[sampleIndex] += (lub + airyHarmonic1 + airyHarmonic2 + fluidTexture + naturalResonance) * 0.55;
+    }
+  }
+
+  /**
+   * Apply ethereal Doppler processing with Super Saiyan aura-like quality
+   * Enhances the warm, intimate, organic feel with continuous flowing energy
+   */
+  private static applyYouTubeReferenceProcessing(channelData: Float32Array, sampleRate: number) {
+    // Gentle compression to enhance the whoomp-lub pattern while preserving aural flow
+    for (let i = 0; i < channelData.length; i++) {
+      // Soft compression with ethereal quality preservation
+      channelData[i] = Math.tanh(channelData[i] * 1.05) * 0.98;
+    }
+    
+    // Apply warm, organic filtering - like energy flowing through amniotic fluid
+    for (let i = 1; i < channelData.length; i++) {
+      channelData[i] = channelData[i] * 0.86 + channelData[i - 1] * 0.14;
+    }
+    
+    // Add ethereal reverberation for in-womb intimacy
+    const echoDelay1 = Math.floor(sampleRate * 0.012); // 12ms echo
+    const echoDelay2 = Math.floor(sampleRate * 0.025); // 25ms echo
+    for (let i = Math.max(echoDelay1, echoDelay2); i < channelData.length; i++) {
+      channelData[i] += channelData[i - echoDelay1] * 0.06; // Primary echo
+      channelData[i] += channelData[i - echoDelay2] * 0.04; // Secondary echo
+    }
+    
+    // Apply gentle harmonic enhancement for aural richness
+    for (let i = 2; i < channelData.length - 2; i++) {
+      const harmonicEnhancement = (channelData[i - 2] + channelData[i - 1] + channelData[i] + 
+                                  channelData[i + 1] + channelData[i + 2]) * 0.02;
+      channelData[i] += harmonicEnhancement;
+    }
+    
+    // Normalize for intimate, organic Doppler volume
+    let maxAmplitude = 0;
+    for (let i = 0; i < channelData.length; i++) {
+      maxAmplitude = Math.max(maxAmplitude, Math.abs(channelData[i]));
+    }
+    
+    if (maxAmplitude > 0) {
+      // Normalize to warm, intimate level - like being close to life energy
+      const normalizeFactor = 0.85 / maxAmplitude; 
+      for (let i = 0; i < channelData.length; i++) {
+        channelData[i] *= normalizeFactor;
+      }
     }
   }
 

@@ -42,56 +42,56 @@ export class GPTUltrasoundAnalyzer {
       console.log('🔍 API key found, length:', apiKey.length);
 
       const prompt = `
-You are an audio-for-health DSP assistant. Given a fetal ultrasound image, you must:
+You are an audio-for-health DSP assistant. Given a fetal ultrasound image, perform the following steps deterministically:
 
-1) Detect fetal BPM/FHR.
-2) Output JSON parameters for synthesizing a Doppler-style fetal heartbeat that matches the tone of this reference:
-   https://www.youtube.com/shorts/32JCR69CJvo
+1) Detect fetal heart rate (BPM/FHR) from the image.
+2) Return a JSON object with both:
+   a) Detected BPM + analysis
+   b) Synthesis parameters for Doppler-style fetal heartbeat audio that matches the tonal qualities of this YouTube reference:
+      https://www.youtube.com/shorts/32JCR69CJvo
 
---------------------------------
-TARGET SOUND (MATCH THIS EXACTLY)
---------------------------------
-- Continuous warm "whoosh" bed with subtle "lub–dub" peaks blended into the noise.
-- No percussive or clicky "thump–tap" transients.
-- Low hum: 30–60 Hz.
-- Mid/high swish: 600–1200 Hz.
-- Gentle Doppler FM: ±2% on swish band at ~1.5 Hz.
-- Warm, organic, slightly diffuse — as if heard through body tissue.
-
---------------------------------
-BPM DETECTION
---------------------------------
-- If image shows BPM/FHR, use it exactly.
-- Otherwise, estimate from waveform spacing over ≥2 seconds (±1 BPM precision).
-- If estimation fails, default to 140 BPM.
-- Output "confidence" (0–1) in detection.
+REFERENCE TONE:
+- Ethereal, continuous warm energy flow with "whoomp-lub" double-pulse pattern.
+- Deep, rounded 'whoomp' followed closely by softer 'lub' (whoomp-lub… whoomp-lub…).
+- Continuous soft hum/airy resonance like Super Saiyan aura - warm, flowing life energy.
+- Fluid-like, slightly muffled tone through amniotic fluid and body tissue.
+- No electronic beeps, synthetic pings, or harsh artifacts.
+- Organic, intimate, breathing quality with natural pulse texture.
 
 --------------------------------
-BASELINE SOUND PARAMETERS
+BPM DETECTION RULES:
 --------------------------------
-- Systolic ("lub"): 80–150 Hz + broadband noise to ~1 kHz, intensity 0.8–0.95.
-- Diastolic ("dub"): 50–120 Hz, softer than "lub", intensity 0.5–0.75.
-- Rhythm: "lub" → short pause (40–60 ms) → "dub" → longer pause until next beat.
-- Background: light continuous whooshing noise.
-- Doppler effect: moderate (±2% FM of swish band).
+- If BPM/FHR value is visible in the image, use it exactly.
+- Otherwise, estimate from waveform spacing across ≥2 seconds, target ±1 BPM accuracy.
+- If estimation fails, use 140 BPM.
+- Output a "confidence" rating 0–1.
 
 --------------------------------
-REALISM REQUIREMENTS (ALWAYS APPLY)
+BASELINE SOUND CHARACTERISTICS:
+--------------------------------
+- Systolic ("lub") fundamental: 80–150 Hz + broadband noise up to ~1 kHz.
+- Diastolic ("dub") fundamental: 50–120 Hz, softer than "lub".
+- Systolic intensity: 0.8–0.95, diastolic intensity: 0.5–0.75.
+- Rhythm: "lub" + short pause (40–60 ms) + "dub" + longer pause before next beat.
+- Background: continuous whooshing noise.
+- Doppler: moderate (±2% FM swish band).
+
+--------------------------------
+REALISM REQUIREMENTS (always applied in synthesis):
 --------------------------------
 - Pink noise swish band (600–1200 Hz) + low hum (30–60 Hz).
-- Lub/dub as amplitude envelopes, not discrete drum samples.
-- Noise floor ≈ -38 dBFS below peaks.
-- Master filters: HP @30 Hz, LP @1200 Hz.
-- Soft clip (tanh) to blend peaks into bed.
-- Light reverb: 0.35 s IR, ~14% wet.
-- Humanization: ±5 ms timing jitter, ±2 dB gain jitter.
+- Lub/dub via amplitude envelope, not discrete drum samples.
+- Background noise ≈ -38 dBFS under peaks.
+- High-pass @30 Hz, low-pass @1200 Hz.
+- Soft clipping (tanh) to blend peaks into bed.
+- Light reverb (0.35s IR, ~14% wet).
+- ±5 ms timing jitter, ±2 dB gain jitter per beat.
 
 --------------------------------
-OUTPUT FORMAT (JSON ONLY — NO EXTRA TEXT)
---------------------------------
+RETURN FORMAT (only JSON, no extra text):
 {
   "bpm": number,
-  "confidence": number (0-1),
+  "confidence": number (0–1),
   "audioCharacteristics": {
     "systolicIntensity": number,
     "diastolicIntensity": number,
@@ -102,14 +102,13 @@ OUTPUT FORMAT (JSON ONLY — NO EXTRA TEXT)
     "rhythm": "regular" | "irregular" | "variable",
     "backgroundNoiseLevel": "low" | "medium" | "high"
   },
-  "analysis": "Brief explanation of BPM detection method and deviations from baseline values"
+  "analysis": "Brief explanation of BPM determination",
+  "base64AudioWav": "string (optional — base64-encoded 4–6s Doppler-style heartbeat)"
 }
-
 --------------------------------
-RULES
---------------------------------
-- Only modify baseline intensities or frequencies if the waveform clearly indicates it.
-- The tonal profile must be indistinguishable from the YouTube reference.
+RULE:
+- Only adjust intensities or frequencies if the waveform clearly suggests it; otherwise use baseline.
+- Ensure tonal profile matches the YouTube reference exactly.
 `;
 
       console.log('🔍 Making API request to GPT-4 Vision...');
