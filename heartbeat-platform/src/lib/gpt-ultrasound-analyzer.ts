@@ -6,19 +6,16 @@ export interface UltrasoundAnalysis {
   bpm: number;
   confidence: number;
   audioCharacteristics: {
-    systolicIntensity: number; // 0-1, how strong the first "whoosh" is
-    diastolicIntensity: number; // 0-1, how strong the second "whoosh" is
+    systolicIntensity: number; // 0.8-0.95, how strong the first "lub" sound is
+    diastolicIntensity: number; // 0.5-0.75, how strong the second "dub" sound is
     frequencyRange: {
-      systolic: { min: number; max: number }; // Hz
-      diastolic: { min: number; max: number }; // Hz
+      systolic: { min: number; max: number }; // 80-150 Hz for "lub"
+      diastolic: { min: number; max: number }; // 50-120 Hz for "dub"
     };
     rhythm: 'regular' | 'irregular' | 'variable';
-    clarity: 'clear' | 'moderate' | 'faint';
-    backgroundNoise: 'low' | 'medium' | 'high';
-    dopplerEffect: 'strong' | 'moderate' | 'weak';
+    backgroundNoiseLevel: 'low' | 'medium' | 'high';
   };
   analysis: string;
-  recommendations: string[];
 }
 
 export class GPTUltrasoundAnalyzer {
@@ -44,42 +41,76 @@ export class GPTUltrasoundAnalyzer {
 
       console.log('🔍 API key found, length:', apiKey.length);
 
-      const prompt = `Analyze this fetal ultrasound image and provide detailed audio characteristics for heartbeat generation:
+      const prompt = `
+You are an audio-for-health DSP assistant. Given a fetal ultrasound image, you must:
 
-1. **BPM Detection**: Look for any text showing heart rate or BPM (like "FHR 155bpm", "HR 140", "BPM 150", etc.) and extract the exact number.
+1) Detect fetal BPM/FHR.
+2) Output JSON parameters for synthesizing a Doppler-style fetal heartbeat that matches the tone of this reference:
+   https://www.youtube.com/shorts/32JCR69CJvo
 
-2. **Image Analysis**: Analyze the image quality, clarity, and characteristics that would affect audio generation.
+--------------------------------
+TARGET SOUND (MATCH THIS EXACTLY)
+--------------------------------
+- Continuous warm "whoosh" bed with subtle "lub–dub" peaks blended into the noise.
+- No percussive or clicky "thump–tap" transients.
+- Low hum: 30–60 Hz.
+- Mid/high swish: 600–1200 Hz.
+- Gentle Doppler FM: ±2% on swish band at ~1.5 Hz.
+- Warm, organic, slightly diffuse — as if heard through body tissue.
 
-3. **Audio Characteristics**: Based on the image analysis, determine:
-   - Systolic intensity (0-1): How strong the first "lub" sound should be
-   - Diastolic intensity (0-1): How strong the second "dub" sound should be
-   - Frequency ranges for both systolic and diastolic sounds
-   - Rhythm pattern (regular/irregular/variable)
-   - Clarity level (clear/moderate/faint)
-   - Background noise level (low/medium/high)
-   - Doppler effect strength (strong/moderate/weak)
+--------------------------------
+BPM DETECTION
+--------------------------------
+- If image shows BPM/FHR, use it exactly.
+- Otherwise, estimate from waveform spacing over ≥2 seconds (±1 BPM precision).
+- If estimation fails, default to 140 BPM.
+- Output "confidence" (0–1) in detection.
 
-Respond in this exact JSON format:
+--------------------------------
+BASELINE SOUND PARAMETERS
+--------------------------------
+- Systolic ("lub"): 80–150 Hz + broadband noise to ~1 kHz, intensity 0.8–0.95.
+- Diastolic ("dub"): 50–120 Hz, softer than "lub", intensity 0.5–0.75.
+- Rhythm: "lub" → short pause (40–60 ms) → "dub" → longer pause until next beat.
+- Background: light continuous whooshing noise.
+- Doppler effect: moderate (±2% FM of swish band).
+
+--------------------------------
+REALISM REQUIREMENTS (ALWAYS APPLY)
+--------------------------------
+- Pink noise swish band (600–1200 Hz) + low hum (30–60 Hz).
+- Lub/dub as amplitude envelopes, not discrete drum samples.
+- Noise floor ≈ -38 dBFS below peaks.
+- Master filters: HP @30 Hz, LP @1200 Hz.
+- Soft clip (tanh) to blend peaks into bed.
+- Light reverb: 0.35 s IR, ~14% wet.
+- Humanization: ±5 ms timing jitter, ±2 dB gain jitter.
+
+--------------------------------
+OUTPUT FORMAT (JSON ONLY — NO EXTRA TEXT)
+--------------------------------
 {
-  "bpm": number (the heart rate you found, or 140 if not found),
-  "confidence": number (0-1, how confident you are in the BPM),
+  "bpm": number,
+  "confidence": number (0-1),
   "audioCharacteristics": {
-    "systolicIntensity": number (0-1),
-    "diastolicIntensity": number (0-1),
+    "systolicIntensity": number,
+    "diastolicIntensity": number,
     "frequencyRange": {
       "systolic": {"min": number, "max": number},
       "diastolic": {"min": number, "max": number}
     },
     "rhythm": "regular" | "irregular" | "variable",
-    "clarity": "clear" | "moderate" | "faint",
-    "backgroundNoise": "low" | "medium" | "high",
-    "dopplerEffect": "strong" | "moderate" | "weak"
+    "backgroundNoiseLevel": "low" | "medium" | "high"
   },
-  "analysis": "detailed description of what you found and why you chose these audio characteristics",
-  "recommendations": ["specific audio generation recommendations based on the analysis"]
+  "analysis": "Brief explanation of BPM detection method and deviations from baseline values"
 }
 
-Provide realistic values based on typical fetal heart characteristics and the image quality you observe.`;
+--------------------------------
+RULES
+--------------------------------
+- Only modify baseline intensities or frequencies if the waveform clearly indicates it.
+- The tonal profile must be indistinguishable from the YouTube reference.
+`;
 
       console.log('🔍 Making API request to GPT-4 Vision...');
 
@@ -108,7 +139,7 @@ Provide realistic values based on typical fetal heart characteristics and the im
               ]
             }
           ],
-          max_tokens: 1500,
+          max_tokens: 1500, // Back to normal for the simplified prompt
           temperature: 0.1
         })
       });
@@ -163,25 +194,22 @@ Provide realistic values based on typical fetal heart characteristics and the im
       bpm: this.validateBPM((result.bpm as number) || 140),
       confidence: Math.max(0, Math.min(1, (result.confidence as number) || 0.5)),
       audioCharacteristics: {
-        systolicIntensity: Math.max(0, Math.min(1, (audioChars.systolicIntensity as number) || 0.8)),
-        diastolicIntensity: Math.max(0, Math.min(1, (audioChars.diastolicIntensity as number) || 0.6)),
+        systolicIntensity: Math.max(0.8, Math.min(0.95, (audioChars.systolicIntensity as number) || 0.85)),
+        diastolicIntensity: Math.max(0.5, Math.min(0.75, (audioChars.diastolicIntensity as number) || 0.6)),
         frequencyRange: {
           systolic: {
-            min: Math.max(800, Math.min(1200, (systolic.min as number) || 900)),
-            max: Math.max(1000, Math.min(1400, (systolic.max as number) || 1100))
+            min: Math.max(80, Math.min(150, (systolic.min as number) || 100)),
+            max: Math.max(150, Math.min(1000, (systolic.max as number) || 200))
           },
           diastolic: {
-            min: Math.max(600, Math.min(900, (diastolic.min as number) || 650)),
-            max: Math.max(700, Math.min(1000, (diastolic.max as number) || 800))
+            min: Math.max(50, Math.min(120, (diastolic.min as number) || 70)),
+            max: Math.max(120, Math.min(200, (diastolic.max as number) || 100))
           }
         },
         rhythm: (audioChars.rhythm as 'regular' | 'irregular' | 'variable') || 'regular',
-        clarity: (audioChars.clarity as 'clear' | 'moderate' | 'faint') || 'moderate',
-        backgroundNoise: (audioChars.backgroundNoise as 'low' | 'medium' | 'high') || 'medium',
-        dopplerEffect: (audioChars.dopplerEffect as 'strong' | 'moderate' | 'weak') || 'moderate'
+        backgroundNoiseLevel: (audioChars.backgroundNoiseLevel as 'low' | 'medium' | 'high') || 'low'
       },
-      analysis: (result.analysis as string) || 'GPT-4 Vision analysis completed',
-      recommendations: Array.isArray(result.recommendations) ? (result.recommendations as string[]) : ['Use moderate intensity for authentic sound']
+      analysis: (result.analysis as string) || 'GPT-4 Vision analysis completed'
     };
   }
 
@@ -196,19 +224,16 @@ Provide realistic values based on typical fetal heart characteristics and the im
       bpm: this.validateBPM(bpm),
       confidence: 0.6,
       audioCharacteristics: {
-        systolicIntensity: 0.8,
+        systolicIntensity: 0.85,
         diastolicIntensity: 0.6,
         frequencyRange: {
-          systolic: { min: 900, max: 1100 },
-          diastolic: { min: 650, max: 800 }
+          systolic: { min: 100, max: 200 },
+          diastolic: { min: 70, max: 100 }
         },
         rhythm: 'regular',
-        clarity: 'moderate',
-        backgroundNoise: 'medium',
-        dopplerEffect: 'moderate'
+        backgroundNoiseLevel: 'low'
       },
-      analysis: content,
-      recommendations: ['Use extracted BPM for audio generation']
+      analysis: content
     };
   }
 
@@ -220,19 +245,16 @@ Provide realistic values based on typical fetal heart characteristics and the im
       bpm: 140,
       confidence: 0.3,
       audioCharacteristics: {
-        systolicIntensity: 0.8,
+        systolicIntensity: 0.85,
         diastolicIntensity: 0.6,
         frequencyRange: {
-          systolic: { min: 900, max: 1100 },
-          diastolic: { min: 650, max: 800 }
+          systolic: { min: 100, max: 200 },
+          diastolic: { min: 70, max: 100 }
         },
         rhythm: 'regular',
-        clarity: 'moderate',
-        backgroundNoise: 'medium',
-        dopplerEffect: 'moderate'
+        backgroundNoiseLevel: 'low'
       },
-      analysis: 'Default analysis due to GPT failure',
-      recommendations: ['Use standard fetal heartbeat characteristics']
+      analysis: 'Default analysis due to GPT failure'
     };
   }
 
@@ -265,19 +287,16 @@ Provide realistic values based on typical fetal heart characteristics and the im
             bpm: 155, // Default based on typical fetal heart rate
             confidence: 0.7,
             audioCharacteristics: {
-              systolicIntensity: 0.8,
+              systolicIntensity: 0.85,
               diastolicIntensity: 0.6,
               frequencyRange: {
-                systolic: { min: 900, max: 1100 },
-                diastolic: { min: 650, max: 800 }
+                systolic: { min: 100, max: 200 },
+                diastolic: { min: 70, max: 100 }
               },
               rhythm: 'regular',
-              clarity: 'moderate',
-              backgroundNoise: 'medium',
-              dopplerEffect: 'moderate'
+              backgroundNoiseLevel: 'low'
             },
-            analysis: 'Fallback analysis: Using typical fetal heart rate characteristics',
-            recommendations: ['Use standard fetal heartbeat characteristics']
+            analysis: 'Fallback analysis: Using typical fetal heart rate characteristics'
           });
         };
 

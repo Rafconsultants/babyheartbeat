@@ -97,16 +97,14 @@ export class AudioGenerator {
 
     // Use GPT analysis for precise audio characteristics
     const characteristics = gptAnalysis?.audioCharacteristics || {
-      systolicIntensity: 0.8,
+      systolicIntensity: 0.85,
       diastolicIntensity: 0.6,
       frequencyRange: {
-        systolic: { min: 900, max: 1100 },
-        diastolic: { min: 650, max: 800 }
+        systolic: { min: 100, max: 200 },
+        diastolic: { min: 70, max: 100 }
       },
-      rhythm: 'regular' as const,
-      clarity: 'moderate' as const,
-      backgroundNoise: 'medium' as const,
-      dopplerEffect: 'moderate' as const
+      rhythm: 'regular',
+      backgroundNoiseLevel: 'low'
     };
 
     console.log('🎵 Using audio characteristics:', characteristics);
@@ -128,7 +126,7 @@ export class AudioGenerator {
       firstWhooshDuration,
       characteristics.frequencyRange.systolic,
       characteristics.systolicIntensity,
-      characteristics.dopplerEffect,
+      'moderate', // Default Doppler effect
       sampleRate,
       'systolic'
     );
@@ -145,7 +143,7 @@ export class AudioGenerator {
       secondWhooshDuration,
       characteristics.frequencyRange.diastolic,
       characteristics.diastolicIntensity,
-      characteristics.dopplerEffect,
+      'moderate', // Default Doppler effect
       sampleRate,
       'diastolic'
     );
@@ -156,7 +154,7 @@ export class AudioGenerator {
       startSample,
       endSample,
       sampleRate,
-      characteristics.backgroundNoise
+      characteristics.backgroundNoiseLevel
     );
 
     // Add watermark if needed
@@ -433,8 +431,8 @@ export class AudioGenerator {
         }
 
         // Add background noise based on GPT analysis
-        if (characteristics.backgroundNoise !== 'low') {
-          const noiseMultiplier = characteristics.backgroundNoise === 'high' ? 0.02 : 0.01;
+            if (characteristics.backgroundNoiseLevel !== 'low') {
+      const noiseMultiplier = characteristics.backgroundNoiseLevel === 'high' ? 0.02 : 0.01;
           for (let i = startSample; i < beatEnd && i < channelData.length; i++) {
             const noise = (Math.random() - 0.5) * noiseMultiplier;
             channelData[i] += noise;
@@ -536,7 +534,7 @@ export class AudioGenerator {
           }
           // Add exact ultrasound background noise
           else if (t < 0.6) {
-            const noiseMultiplier = characteristics.backgroundNoise === 'high' ? 1.5 : characteristics.backgroundNoise === 'medium' ? 1.0 : 0.5;
+            const noiseMultiplier = characteristics.backgroundNoiseLevel === 'high' ? 1.5 : characteristics.backgroundNoiseLevel === 'medium' ? 1.0 : 0.5;
             const noise1 = (Math.random() - 0.5) * 0.035 * decay * noiseMultiplier;
             const noise2 = Math.sin(t * 18000 * 2 * Math.PI) * 0.018 * decay * noiseMultiplier;
             const noise3 = Math.sin(t * 12000 * 2 * Math.PI) * 0.012 * decay * noiseMultiplier;
@@ -559,125 +557,226 @@ export class AudioGenerator {
   }
 
   /**
-   * Generate authentic fetal Doppler ultrasound heartbeat sound
-   * Creates the characteristic "THUMP-tap" pattern with warm, fluid-like quality
-   * like it's coming from inside the body (110-160 BPM range)
-   * Emulates real OB-GYN Doppler scans with natural, non-electronic tones
+   * Generate authentic fetal ultrasound heartbeat sound
+   * Focus on clear heartbeat pattern with minimal background noise
    */
-  static async generateFetalDopplerHeartbeat(bpm: number, duration: number = 8, gptAnalysis?: UltrasoundAnalysis): Promise<string> {
-    console.log('🎵 Generating authentic OB-GYN fetal Doppler heartbeat with BPM:', bpm, 'Duration:', duration);
-    console.log('🎵 GPT Analysis:', gptAnalysis);
+  static async generateFetalDopplerHeartbeat(bpm: number, duration: number = 5, gptAnalysis?: UltrasoundAnalysis): Promise<string> {
+    console.log('🎵 Generating authentic fetal ultrasound heartbeat at', bpm, 'BPM for', duration, 'seconds');
 
     try {
+      // Audio settings
+      const sampleRate = 48000;
+      const bitDepth = 24;
+      const channels = 1;
+      const totalSamples = Math.floor(duration * sampleRate);
+      
+      // Create audio context
       const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      const sampleRate = audioContext.sampleRate;
-      const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+      const buffer = audioContext.createBuffer(channels, totalSamples, sampleRate);
       const channelData = buffer.getChannelData(0);
 
-      const beatsPerSecond = bpm / 60;
-      const beatInterval = 1 / beatsPerSecond;
-
-      console.log('🎵 Fetal Doppler parameters:', {
-        sampleRate, duration, beatsPerSecond, beatInterval,
-        totalBeats: Math.floor(duration * beatsPerSecond)
-      });
-
-      // Use GPT analysis for precise characteristics, with authentic OB-GYN defaults
-      const characteristics = gptAnalysis?.audioCharacteristics || {
-        systolicIntensity: 0.75,
-        diastolicIntensity: 0.35,
+      // Use GPT analysis for precise audio characteristics
+      const characteristics = (gptAnalysis?.audioCharacteristics as any) || {
+        systolicIntensity: 0.85,
+        diastolicIntensity: 0.6,
         frequencyRange: {
-          systolic: { min: 800, max: 1000 },
-          diastolic: { min: 600, max: 750 }
+          systolic: { min: 100, max: 200 },
+          diastolic: { min: 70, max: 100 }
         },
-        rhythm: 'regular' as const,
-        clarity: 'moderate' as const,
-        backgroundNoise: 'medium' as const,
-        dopplerEffect: 'moderate' as const
+        rhythm: 'regular',
+        backgroundNoiseLevel: 'low'
       };
 
-      console.log('🎵 Using authentic OB-GYN Doppler characteristics:', characteristics);
+      console.log('🎵 Using audio characteristics:', characteristics);
 
-      for (let time = 0; time < duration; time += beatInterval) {
-        const startSample = Math.floor(time * sampleRate);
-        const beatEnd = Math.floor((time + 0.65) * sampleRate); // Optimized beat duration for natural flow
+      // Calculate beat timing
+      const beatInterval = 60 / bpm; // seconds per beat
+      const beatSamples = Math.floor(beatInterval * sampleRate);
+      const totalBeats = Math.floor(duration / beatInterval);
 
-        // Apply subtle rhythm variations based on GPT analysis
-        let rhythmVariation = 1.0;
-        if (characteristics.rhythm === 'irregular') {
-          rhythmVariation = 0.88 + Math.random() * 0.24; // 0.88-1.12 variation
-        } else if (characteristics.rhythm === 'variable') {
-          rhythmVariation = 0.94 + Math.random() * 0.12; // 0.94-1.06 variation
-        }
+      console.log(`🎵 Beat interval: ${beatInterval}s, ${beatSamples} samples, ${totalBeats} total beats`);
 
-        // Create authentic fetal "THUMP-tap" pattern with natural, fluid-like quality
-        for (let i = startSample; i < beatEnd && i < channelData.length; i++) {
-          const t = (i - startSample) / sampleRate;
-          const decay = Math.exp(-t * 7); // Natural decay for warm, fluid sound
+      // Generate very subtle background (minimal whoosh)
+      this.generateMinimalBackground(channelData, sampleRate, duration, characteristics);
 
-          // "THUMP" - Deep, fuller first sound (systolic) with natural warmth
-          if (t < 0.09 * rhythmVariation) {
-            // Lower, warmer frequencies for the deep "THUMP" sound
-            const thumpFreq = 32 + Math.sin(t * Math.PI * 1.8) * 18; // 14-50 Hz range for natural warmth
-            const thump = Math.sin(t * thumpFreq * 2 * Math.PI) * decay * characteristics.systolicIntensity;
-            
-            // Add natural harmonics for warmth and fullness
-            const harmonic1 = Math.sin(t * thumpFreq * 2 * 2 * Math.PI) * decay * characteristics.systolicIntensity * 0.45;
-            const harmonic2 = Math.sin(t * thumpFreq * 3 * 2 * Math.PI) * decay * characteristics.systolicIntensity * 0.25;
-            const harmonic3 = Math.sin(t * thumpFreq * 4 * 2 * Math.PI) * decay * characteristics.systolicIntensity * 0.12;
-            
-            // Add natural modulation for organic sound
-            const modulation = Math.sin(t * 12 * 2 * Math.PI) * 0.08;
-            
-            // Apply warm, natural muffling effect
-            const warmThump = (thump + harmonic1 + harmonic2 + harmonic3) * (1 + modulation) * 0.75;
-            
-            channelData[i] = warmThump;
-          }
-          // Brief natural pause between THUMP and tap
-          else if (t < 0.13 * rhythmVariation) {
-            channelData[i] = 0;
-          }
-          // "tap" - Softer, lighter second sound (diastolic) with natural flow
-          else if (t < 0.28 * rhythmVariation) {
-            // Higher frequencies for the soft "tap" sound with natural flow
-            const tapFreq = 180 + Math.sin((t - 0.13) * Math.PI * 2.2) * 70; // 110-250 Hz range
-            const tap = Math.sin((t - 0.13) * tapFreq * 2 * Math.PI) * decay * characteristics.diastolicIntensity * 0.35;
-            
-            // Add natural harmonics for the tap
-            const harmonic1 = Math.sin((t - 0.13) * tapFreq * 2 * 2 * Math.PI) * decay * characteristics.diastolicIntensity * 0.12;
-            const harmonic2 = Math.sin((t - 0.13) * tapFreq * 3 * 2 * Math.PI) * decay * characteristics.diastolicIntensity * 0.06;
-            
-            // Apply natural muffling for soft, warm sound
-            const warmTap = (tap + harmonic1 + harmonic2) * 0.35;
-            
-            channelData[i] = warmTap;
-          }
-          // Rest period with enhanced natural amniotic fluid effects
-          else if (t < 0.65) {
-            // Add natural "amniotic fluid" resonance and whooshing
-            const amnioticResonance = Math.sin(t * 28 * 2 * Math.PI) * 0.025 * decay;
-            const whooshEffect = Math.sin(t * 42 * 2 * Math.PI) * 0.018 * decay;
-            const bodyTissue = Math.sin(t * 16 * 2 * Math.PI) * 0.012 * decay;
-            
-            channelData[i] = amnioticResonance + whooshEffect + bodyTissue;
-          }
-        }
-
-        // Add authentic OB-GYN Doppler background with natural fluid characteristics
-        this.addAuthenticOBGYNDopplerBackground(channelData, startSample, beatEnd, sampleRate, characteristics);
+      // Add prominent lub-dub beats
+      for (let beat = 0; beat < totalBeats; beat++) {
+        const beatStart = beat * beatSamples;
+        
+        // Add timing jitter (±5ms)
+        const jitterMs = (Math.random() - 0.5) * 10; // ±5ms
+        const jitterSamples = Math.floor(jitterMs * sampleRate / 1000);
+        const adjustedStart = Math.max(0, beatStart + jitterSamples);
+        
+        // Generate clear lub-dub pattern
+        this.addClearLubDubBeat(
+          channelData,
+          adjustedStart,
+          beatSamples,
+          sampleRate,
+          characteristics,
+          beat
+        );
       }
 
-      // Convert to blob
-      const wavBuffer = this.createWAVFile(buffer);
-      const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+      // Apply gentle processing
+      this.applyGentleProcessing(channelData, sampleRate);
 
-      console.log('🎵 Authentic OB-GYN fetal Doppler heartbeat completed, blob size:', blob.size, 'bytes');
-      return URL.createObjectURL(blob);
+      // Convert to WAV
+      const wavBlob = this.bufferToWav(buffer, bitDepth);
+      const audioUrl = URL.createObjectURL(wavBlob);
+
+      console.log('🎵 Authentic fetal ultrasound heartbeat generated successfully');
+      return audioUrl;
+
     } catch (error) {
-      console.error('❌ Authentic fetal Doppler generation failed:', error);
-      // Fallback to demo audio
-      return '/demo-heartbeat.mp3';
+      console.error('❌ Error generating fetal ultrasound heartbeat:', error);
+      throw new Error('Failed to generate fetal ultrasound heartbeat');
+    }
+  }
+
+  /**
+   * Generate minimal background noise for authentic ultrasound sound
+   */
+  private static generateMinimalBackground(
+    channelData: Float32Array,
+    sampleRate: number,
+    duration: number,
+    characteristics: any
+  ) {
+    // Handle different interface versions
+    const backgroundNoiseLevel = characteristics.backgroundNoiseLevel || characteristics.backgroundNoise || 'low';
+    const backgroundLevel = backgroundNoiseLevel === 'high' ? 0.008 : 
+                           backgroundNoiseLevel === 'medium' ? 0.005 : 0.002;
+
+    for (let i = 0; i < channelData.length; i++) {
+      const time = i / sampleRate;
+      
+      // Very subtle low hum (30-60 Hz)
+      const lowHum = Math.sin(2 * Math.PI * 45 * time) * backgroundLevel * 0.3;
+      
+      // Minimal swish (600-1200 Hz)
+      const swish = Math.sin(2 * Math.PI * 900 * time) * backgroundLevel * 0.2;
+      
+      // Very light noise
+      const noise = (Math.random() - 0.5) * backgroundLevel * 0.1;
+      
+      channelData[i] = lowHum + swish + noise;
+    }
+  }
+
+  /**
+   * Add clear lub-dub beat with prominent heartbeat sound
+   */
+  private static addClearLubDubBeat(
+    channelData: Float32Array,
+    startSample: number,
+    beatSamples: number,
+    sampleRate: number,
+    characteristics: any,
+    beatIndex: number
+  ) {
+    const lubDuration = Math.floor(beatSamples * 0.18); // 18% of beat for lub
+    const dubDuration = Math.floor(beatSamples * 0.15); // 15% of beat for dub
+    const pauseDuration = Math.floor(beatSamples * 0.06); // 6% pause between lub-dub
+    
+    const lubStart = startSample;
+    const dubStart = lubStart + lubDuration + pauseDuration;
+    
+    // Add intensity variation (±2 dB)
+    const intensityVariation = 1.0 + (Math.random() - 0.5) * 0.3; // ±15%
+    
+    // Generate prominent lub (systolic)
+    this.addProminentLubSound(
+      channelData,
+      lubStart,
+      lubDuration,
+      sampleRate,
+      characteristics.systolicIntensity * intensityVariation,
+      characteristics.frequencyRange.systolic
+    );
+    
+    // Generate prominent dub (diastolic)
+    this.addProminentDubSound(
+      channelData,
+      dubStart,
+      dubDuration,
+      sampleRate,
+      characteristics.diastolicIntensity * intensityVariation,
+      characteristics.frequencyRange.diastolic
+    );
+  }
+
+  /**
+   * Add prominent lub (systolic) sound
+   */
+  private static addProminentLubSound(
+    channelData: Float32Array,
+    startSample: number,
+    duration: number,
+    sampleRate: number,
+    intensity: number,
+    frequencyRange: { min: number; max: number }
+  ) {
+    for (let i = 0; i < duration; i++) {
+      const sampleIndex = startSample + i;
+      if (sampleIndex >= channelData.length) break;
+      
+      const time = i / sampleRate;
+      const decay = Math.exp(-time * 6); // Slower decay for more presence
+      
+      // Fundamental frequency with harmonics
+      const fundamental = frequencyRange.min + (frequencyRange.max - frequencyRange.min) * 0.7;
+      const lub = Math.sin(2 * Math.PI * fundamental * time) * decay * intensity * 1.2;
+      
+      // Add harmonics for warmth
+      const harmonic1 = Math.sin(2 * Math.PI * fundamental * 2 * time) * decay * intensity * 0.4;
+      const harmonic2 = Math.sin(2 * Math.PI * fundamental * 3 * time) * decay * intensity * 0.2;
+      
+      // Add to existing background (more prominent)
+      channelData[sampleIndex] += (lub + harmonic1 + harmonic2) * 0.8;
+    }
+  }
+
+  /**
+   * Add prominent dub (diastolic) sound
+   */
+  private static addProminentDubSound(
+    channelData: Float32Array,
+    startSample: number,
+    duration: number,
+    sampleRate: number,
+    intensity: number,
+    frequencyRange: { min: number; max: number }
+  ) {
+    for (let i = 0; i < duration; i++) {
+      const sampleIndex = startSample + i;
+      if (sampleIndex >= channelData.length) break;
+      
+      const time = i / sampleRate;
+      const decay = Math.exp(-time * 5); // Slower decay for more presence
+      
+      // Fundamental frequency with harmonics
+      const fundamental = frequencyRange.min + (frequencyRange.max - frequencyRange.min) * 0.5;
+      const dub = Math.sin(2 * Math.PI * fundamental * time) * decay * intensity * 1.0;
+      
+      // Add harmonics for warmth
+      const harmonic1 = Math.sin(2 * Math.PI * fundamental * 2 * time) * decay * intensity * 0.3;
+      const harmonic2 = Math.sin(2 * Math.PI * fundamental * 3 * time) * decay * intensity * 0.15;
+      
+      // Add to existing background (more prominent)
+      channelData[sampleIndex] += (dub + harmonic1 + harmonic2) * 0.7;
+    }
+  }
+
+  /**
+   * Apply gentle processing for authentic ultrasound sound
+   */
+  private static applyGentleProcessing(channelData: Float32Array, sampleRate: number) {
+    // Gentle compression
+    for (let i = 0; i < channelData.length; i++) {
+      // Soft clipping to prevent distortion
+      channelData[i] = Math.tanh(channelData[i] * 0.8) * 0.9;
     }
   }
 
@@ -691,8 +790,10 @@ export class AudioGenerator {
     sampleRate: number,
     characteristics: any
   ) {
-    const noiseMultiplier = characteristics.backgroundNoise === 'high' ? 0.018 : 
-                           characteristics.backgroundNoise === 'medium' ? 0.012 : 0.006;
+    // Handle different interface versions
+    const backgroundNoiseLevel = characteristics.backgroundNoiseLevel || characteristics.backgroundNoise || 'low';
+    const noiseMultiplier = backgroundNoiseLevel === 'high' ? 0.018 : 
+                           backgroundNoiseLevel === 'medium' ? 0.012 : 0.006;
 
     for (let i = startSample; i < endSample; i++) {
       if (i >= channelData.length) break;
@@ -727,5 +828,223 @@ export class AudioGenerator {
                        amnioticWhoosh + bodyTissue + movement + echoEffect + warmMuffle +
                        fluidFlow + gentleWhoosh;
     }
+  }
+
+  /**
+   * Generate continuous warm whoosh background matching YouTube reference
+   */
+  private static generateContinuousDopplerBackground(
+    channelData: Float32Array,
+    sampleRate: number,
+    duration: number
+  ) {
+    console.log('🎵 Generating continuous Doppler background');
+    
+    for (let i = 0; i < channelData.length; i++) {
+      const time = i / sampleRate;
+      
+      // Low hum (30-60 Hz) - warm foundation
+      const lowHum = Math.sin(2 * Math.PI * 45 * time) * 0.15;
+      
+      // Mid-high swish (600-1200 Hz) - characteristic Doppler sound
+      const swish = Math.sin(2 * Math.PI * 900 * time) * 0.1;
+      
+      // Pink noise characteristics for natural warmth
+      const noise = (Math.random() - 0.5) * 0.05;
+      
+      // Gentle Doppler wobble
+      const wobble = Math.sin(2 * Math.PI * 1.5 * time) * 0.02;
+      
+      channelData[i] = lowHum + swish + noise + wobble;
+    }
+  }
+
+  /**
+   * Add lub-dub beat with natural variation
+   */
+  private static addLubDubBeat(
+    channelData: Float32Array,
+    startSample: number,
+    beatSamples: number,
+    sampleRate: number,
+    characteristics: any,
+    beatIndex: number
+  ) {
+    const lubDuration = Math.floor(beatSamples * 0.15); // 15% of beat for lub
+    const dubDuration = Math.floor(beatSamples * 0.12); // 12% of beat for dub
+    const pauseDuration = Math.floor(beatSamples * 0.08); // 8% pause between lub-dub
+    
+    const lubStart = startSample;
+    const dubStart = lubStart + lubDuration + pauseDuration;
+    
+    // Add intensity variation (±2 dB)
+    const intensityVariation = 1.0 + (Math.random() - 0.5) * 0.4; // ±20%
+    
+    // Generate lub (systolic)
+    this.addLubSound(
+      channelData,
+      lubStart,
+      lubDuration,
+      sampleRate,
+      characteristics.systolicIntensity * intensityVariation,
+      characteristics.frequencyRange.systolic
+    );
+    
+    // Generate dub (diastolic)
+    this.addDubSound(
+      channelData,
+      dubStart,
+      dubDuration,
+      sampleRate,
+      characteristics.diastolicIntensity * intensityVariation,
+      characteristics.frequencyRange.diastolic
+    );
+  }
+
+  /**
+   * Add lub (systolic) sound
+   */
+  private static addLubSound(
+    channelData: Float32Array,
+    startSample: number,
+    duration: number,
+    sampleRate: number,
+    intensity: number,
+    frequencyRange: { min: number; max: number }
+  ) {
+    for (let i = 0; i < duration; i++) {
+      const sampleIndex = startSample + i;
+      if (sampleIndex >= channelData.length) break;
+      
+      const time = i / sampleRate;
+      const decay = Math.exp(-time * 8); // Natural decay
+      
+      // Fundamental frequency with harmonics
+      const fundamental = frequencyRange.min + (frequencyRange.max - frequencyRange.min) * 0.6;
+      const lub = Math.sin(2 * Math.PI * fundamental * time) * decay * intensity * 0.8;
+      
+      // Add harmonics for warmth
+      const harmonic1 = Math.sin(2 * Math.PI * fundamental * 2 * time) * decay * intensity * 0.3;
+      const harmonic2 = Math.sin(2 * Math.PI * fundamental * 3 * time) * decay * intensity * 0.15;
+      
+      // Add to existing background (blend, don't replace)
+      channelData[sampleIndex] += (lub + harmonic1 + harmonic2) * 0.6;
+    }
+  }
+
+  /**
+   * Add dub (diastolic) sound
+   */
+  private static addDubSound(
+    channelData: Float32Array,
+    startSample: number,
+    duration: number,
+    sampleRate: number,
+    intensity: number,
+    frequencyRange: { min: number; max: number }
+  ) {
+    for (let i = 0; i < duration; i++) {
+      const sampleIndex = startSample + i;
+      if (sampleIndex >= channelData.length) break;
+      
+      const time = i / sampleRate;
+      const decay = Math.exp(-time * 10); // Slightly faster decay for dub
+      
+      // Fundamental frequency with harmonics
+      const fundamental = frequencyRange.min + (frequencyRange.max - frequencyRange.min) * 0.4;
+      const dub = Math.sin(2 * Math.PI * fundamental * time) * decay * intensity * 0.6;
+      
+      // Add harmonics for warmth
+      const harmonic1 = Math.sin(2 * Math.PI * fundamental * 2 * time) * decay * intensity * 0.2;
+      const harmonic2 = Math.sin(2 * Math.PI * fundamental * 3 * time) * decay * intensity * 0.1;
+      
+      // Add to existing background (blend, don't replace)
+      channelData[sampleIndex] += (dub + harmonic1 + harmonic2) * 0.4;
+    }
+  }
+
+  /**
+   * Apply final Doppler post-processing
+   */
+  private static applyDopplerPostProcessing(
+    channelData: Float32Array,
+    sampleRate: number
+  ) {
+    // Apply gentle compression to keep peaks blended with background
+    for (let i = 0; i < channelData.length; i++) {
+      // Soft clipping to prevent harsh peaks
+      channelData[i] = Math.tanh(channelData[i] * 0.8) * 1.2;
+      
+      // Gentle low-pass filter effect
+      if (i > 0) {
+        channelData[i] = channelData[i] * 0.9 + channelData[i - 1] * 0.1;
+      }
+    }
+    
+    // Normalize to prevent clipping
+    let maxAmplitude = 0;
+    for (let i = 0; i < channelData.length; i++) {
+      maxAmplitude = Math.max(maxAmplitude, Math.abs(channelData[i]));
+    }
+    
+    if (maxAmplitude > 0) {
+      const normalizeFactor = 0.8 / maxAmplitude; // Leave headroom
+      for (let i = 0; i < channelData.length; i++) {
+        channelData[i] *= normalizeFactor;
+      }
+    }
+  }
+
+  /**
+   * Convert audio buffer to WAV format
+   */
+  private static bufferToWav(buffer: AudioBuffer, bitDepth: number): Blob {
+    const length = buffer.length;
+    const numberOfChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const arrayBuffer = new ArrayBuffer(44 + length * numberOfChannels * (bitDepth / 8));
+    const view = new DataView(arrayBuffer);
+    
+    // WAV header
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+    
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + length * numberOfChannels * (bitDepth / 8), true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numberOfChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numberOfChannels * (bitDepth / 8), true);
+    view.setUint16(32, numberOfChannels * (bitDepth / 8), true);
+    view.setUint16(34, bitDepth, true);
+    writeString(36, 'data');
+    view.setUint32(40, length * numberOfChannels * (bitDepth / 8), true);
+    
+    // Write audio data
+    const channelData = buffer.getChannelData(0);
+    let offset = 44;
+    
+    for (let i = 0; i < length; i++) {
+      const sample = Math.max(-1, Math.min(1, channelData[i]));
+      const value = Math.round(sample * (Math.pow(2, bitDepth - 1) - 1));
+      
+      if (bitDepth === 16) {
+        view.setInt16(offset, value, true);
+        offset += 2;
+      } else if (bitDepth === 24) {
+        view.setInt8(offset, value & 0xFF);
+        view.setInt8(offset + 1, (value >> 8) & 0xFF);
+        view.setInt8(offset + 2, (value >> 16) & 0xFF);
+        offset += 3;
+      }
+    }
+    
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
   }
 }
