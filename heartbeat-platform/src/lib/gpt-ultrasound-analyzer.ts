@@ -5,9 +5,10 @@
 export interface UltrasoundAnalysis {
   bpm: number;
   confidence: number;
-  beat_times_sec: number[];
-  double_pulse_offset_ms: number | null;
-  amplitude_scalars: number[];
+  beat_times_sec: number[]; // ascending onsets within [0, 8)
+  double_pulse_offset_ms: number | null; // e.g. 55 if two sub-bursts per beat; null if single
+  amplitude_scalars: number[]; // 0..1, same length as beat_times_sec; default 0.8 if unknown
+  analysis: string;
 }
 
 export class GPTUltrasoundAnalyzer {
@@ -33,8 +34,7 @@ export class GPTUltrasoundAnalyzer {
 
       console.log('🔍 API key found, length:', apiKey.length);
 
-      const prompt = `
-Analyze this fetal ultrasound image and return only the timing and amplitude data needed to recreate a realistic Doppler fetal heartbeat from the waveform.
+      const prompt = `Analyze this fetal ultrasound image and return only the timing and amplitude data needed to recreate a realistic Doppler fetal heartbeat from the waveform.
 
 Instructions:
 - If a numeric BPM/FHR is visible on-screen, return it exactly.
@@ -58,8 +58,7 @@ Constraints:
 - If using uniform timing from BPM, align the first beat near 0.12–0.20 s and continue at exact period (60 / bpm).
 - amplitude_scalars should vary gently (±5–8%) unless the waveform clearly shows stronger variation.
 
-Return only valid JSON. No prose.
-`;
+Return only valid JSON. No prose.`;
 
       console.log('🔍 Making API request to GPT-4 Vision...');
 
@@ -137,30 +136,43 @@ Return only valid JSON. No prose.
     const bpm = this.validateBPM((result.bpm as number) || 140);
     const confidence = Math.max(0, Math.min(1, (result.confidence as number) || 0.5));
     
-    // Get beat times or generate uniform timing
-    let beatTimes = result.beat_times_sec as number[] || [];
+    // Handle beat timing - create uniform timing if not provided
+    let beatTimes = (result.beat_times_sec as number[]) || [];
     if (beatTimes.length === 0) {
-      // Generate uniform timing from BPM over 8 seconds
+      // Generate uniform beat timing based on BPM for 8 seconds
       const beatInterval = 60 / bpm;
+      const startTime = 0.12; // Start near 0.12s as per spec
       beatTimes = [];
-      for (let time = 0.15; time < 8.0; time += beatInterval) {
-        beatTimes.push(time);
+      for (let time = startTime; time < 8.0; time += beatInterval) {
+        beatTimes.push(Number(time.toFixed(3)));
       }
     }
     
-    // Get amplitude scalars or use defaults
-    let amplitudeScalars = result.amplitude_scalars as number[] || [];
+    // Validate beat times are within [0, 8) and ascending
+    beatTimes = beatTimes.filter(time => time >= 0 && time < 8.0).sort((a, b) => a - b);
+    
+    // Handle amplitude scalars - default to 0.8 if not provided
+    let amplitudeScalars = (result.amplitude_scalars as number[]) || [];
     if (amplitudeScalars.length !== beatTimes.length) {
-      // Generate gentle amplitude variation around 0.8
-      amplitudeScalars = beatTimes.map(() => 0.8 + (Math.random() - 0.5) * 0.08); // ±4% variation
+      amplitudeScalars = beatTimes.map(() => 0.8); // Default amplitude
     }
     
+    // Validate amplitude scalars are between 0 and 1
+    amplitudeScalars = amplitudeScalars.map(amp => Math.max(0, Math.min(1, amp)));
+    
+    // Handle double pulse offset
+    const doublePulseOffset = result.double_pulse_offset_ms as number | null;
+    const validatedOffset = doublePulseOffset && doublePulseOffset >= 40 && doublePulseOffset <= 70 
+      ? doublePulseOffset 
+      : null;
+
     return {
       bpm,
       confidence,
       beat_times_sec: beatTimes,
-      double_pulse_offset_ms: (result.double_pulse_offset_ms as number) || null,
-      amplitude_scalars: amplitudeScalars
+      double_pulse_offset_ms: validatedOffset,
+      amplitude_scalars: amplitudeScalars,
+      analysis: (result.analysis as string) || 'GPT-4 Vision analysis completed'
     };
   }
 
@@ -169,25 +181,23 @@ Return only valid JSON. No prose.
    */
   private static extractFromText(content: string): UltrasoundAnalysis {
     const bpmMatch = content.match(/(\d{3})\s*(?:BPM|bpm|beats?)/i);
-    const bpm = bpmMatch ? parseInt(bpmMatch[1]) : 140;
-    const validatedBpm = this.validateBPM(bpm);
-
-    // Generate uniform timing over 8 seconds
-    const beatInterval = 60 / validatedBpm;
+    const bpm = this.validateBPM(bpmMatch ? parseInt(bpmMatch[1]) : 140);
+    
+    // Generate uniform beat timing
+    const beatInterval = 60 / bpm;
+    const startTime = 0.12;
     const beatTimes: number[] = [];
-    for (let time = 0.15; time < 8.0; time += beatInterval) {
-      beatTimes.push(time);
+    for (let time = startTime; time < 8.0; time += beatInterval) {
+      beatTimes.push(Number(time.toFixed(3)));
     }
 
-    // Generate gentle amplitude variation
-    const amplitudeScalars = beatTimes.map(() => 0.8 + (Math.random() - 0.5) * 0.08);
-
     return {
-      bpm: validatedBpm,
+      bpm,
       confidence: 0.6,
       beat_times_sec: beatTimes,
       double_pulse_offset_ms: null,
-      amplitude_scalars: amplitudeScalars
+      amplitude_scalars: beatTimes.map(() => 0.8),
+      analysis: content
     };
   }
 
@@ -197,19 +207,19 @@ Return only valid JSON. No prose.
   private static getDefaultAnalysis(): UltrasoundAnalysis {
     const bpm = 140;
     const beatInterval = 60 / bpm;
+    const startTime = 0.12;
     const beatTimes: number[] = [];
-    for (let time = 0.15; time < 8.0; time += beatInterval) {
-      beatTimes.push(time);
+    for (let time = startTime; time < 8.0; time += beatInterval) {
+      beatTimes.push(Number(time.toFixed(3)));
     }
-
-    const amplitudeScalars = beatTimes.map(() => 0.8 + (Math.random() - 0.5) * 0.08);
 
     return {
       bpm,
       confidence: 0.3,
       beat_times_sec: beatTimes,
       double_pulse_offset_ms: null,
-      amplitude_scalars: amplitudeScalars
+      amplitude_scalars: beatTimes.map(() => 0.8),
+      analysis: 'Default analysis due to GPT failure'
     };
   }
 
@@ -238,21 +248,21 @@ Return only valid JSON. No prose.
 
           // For now, return a reasonable default based on typical fetal heart rates
           // In a real implementation, you'd use a proper OCR library
-          const bpm = 155;
+          const bpm = 155; // Default based on typical fetal heart rate
           const beatInterval = 60 / bpm;
+          const startTime = 0.12;
           const beatTimes: number[] = [];
-          for (let time = 0.15; time < 8.0; time += beatInterval) {
-            beatTimes.push(time);
+          for (let time = startTime; time < 8.0; time += beatInterval) {
+            beatTimes.push(Number(time.toFixed(3)));
           }
-
-          const amplitudeScalars = beatTimes.map(() => 0.8 + (Math.random() - 0.5) * 0.08);
 
           resolve({
             bpm,
             confidence: 0.7,
             beat_times_sec: beatTimes,
             double_pulse_offset_ms: null,
-            amplitude_scalars: amplitudeScalars
+            amplitude_scalars: beatTimes.map(() => 0.8),
+            analysis: 'Fallback analysis: Using typical fetal heart rate characteristics'
           });
         };
 
