@@ -74,8 +74,8 @@ export default function Home() {
         isWatermarked: true, // For now, all generated audio is watermarked
         confidence: gptAnalysis.confidence,
         method: 'gpt-vision',
-        source: 'Enhanced GPT-4 Vision analysis with audio characteristics',
-        analysis: gptAnalysis.analysis // Pass detailed GPT analysis to result
+        source: 'Noise-burst Doppler model with timing/amplitude data',
+        analysis: `BPM: ${gptAnalysis.bpm}, Confidence: ${Math.round(gptAnalysis.confidence * 100)}%, Beat times: ${gptAnalysis.beat_times_sec.length} beats` // Create summary from new data
       }
 
       console.log('🚀 Final result created:', finalResult);

@@ -5,17 +5,9 @@
 export interface UltrasoundAnalysis {
   bpm: number;
   confidence: number;
-  audioCharacteristics: {
-    systolicIntensity: number; // 0.8-0.95, how strong the first "lub" sound is
-    diastolicIntensity: number; // 0.5-0.75, how strong the second "dub" sound is
-    frequencyRange: {
-      systolic: { min: number; max: number }; // 80-150 Hz for "lub"
-      diastolic: { min: number; max: number }; // 50-120 Hz for "dub"
-    };
-    rhythm: 'regular' | 'irregular' | 'variable';
-    backgroundNoiseLevel: 'low' | 'medium' | 'high';
-  };
-  analysis: string;
+  beat_times_sec: number[];
+  double_pulse_offset_ms: number | null;
+  amplitude_scalars: number[];
 }
 
 export class GPTUltrasoundAnalyzer {
@@ -42,73 +34,31 @@ export class GPTUltrasoundAnalyzer {
       console.log('🔍 API key found, length:', apiKey.length);
 
       const prompt = `
-You are an audio-for-health DSP assistant. Given a fetal ultrasound image, perform the following steps deterministically:
+Analyze this fetal ultrasound image and return only the timing and amplitude data needed to recreate a realistic Doppler fetal heartbeat from the waveform.
 
-1) Detect fetal heart rate (BPM/FHR) from the image.
-2) Return a JSON object with both:
-   a) Detected BPM + analysis
-   b) Synthesis parameters for Doppler-style fetal heartbeat audio that matches the tonal qualities of this YouTube reference:
-      https://www.youtube.com/shorts/32JCR69CJvo
+Instructions:
+- If a numeric BPM/FHR is visible on-screen, return it exactly.
+- Attempt to read beat onsets from the waveform/time axis (use tick marks if present) to produce beat onset times (seconds).
+- If you cannot read onsets but have BPM, compute uniform onsets over an 8.0 s window starting near 0.12 s.
+- If neither BPM nor readable waveform timing is available, set bpm = 140 and compute uniform onsets accordingly.
+- If the waveform shows two close peaks per beat (double-burst), estimate the offset between peaks in milliseconds.
+- If relative beat amplitudes are visually discernible, output gentle normalized scalars (0.7–0.9); otherwise use 0.8 for all.
 
-REFERENCE TONE:
-- Ethereal, continuous warm energy flow with "whoomp-lub" double-pulse pattern.
-- Deep, rounded 'whoomp' followed closely by softer 'lub' (whoomp-lub… whoomp-lub…).
-- Continuous soft hum/airy resonance like Super Saiyan aura - warm, flowing life energy.
-- Fluid-like, slightly muffled tone through amniotic fluid and body tissue.
-- No electronic beeps, synthetic pings, or harsh artifacts.
-- Organic, intimate, breathing quality with natural pulse texture.
-
---------------------------------
-BPM DETECTION RULES:
---------------------------------
-- If BPM/FHR value is visible in the image, use it exactly.
-- Otherwise, estimate from waveform spacing across ≥2 seconds, target ±1 BPM accuracy.
-- If estimation fails, use 140 BPM.
-- Output a "confidence" rating 0–1.
-
---------------------------------
-BASELINE SOUND CHARACTERISTICS:
---------------------------------
-- Systolic ("lub") fundamental: 80–150 Hz + broadband noise up to ~1 kHz.
-- Diastolic ("dub") fundamental: 50–120 Hz, softer than "lub".
-- Systolic intensity: 0.8–0.95, diastolic intensity: 0.5–0.75.
-- Rhythm: "lub" + short pause (40–60 ms) + "dub" + longer pause before next beat.
-- Background: continuous whooshing noise.
-- Doppler: moderate (±2% FM swish band).
-
---------------------------------
-REALISM REQUIREMENTS (always applied in synthesis):
---------------------------------
-- Pink noise swish band (600–1200 Hz) + low hum (30–60 Hz).
-- Lub/dub via amplitude envelope, not discrete drum samples.
-- Background noise ≈ -38 dBFS under peaks.
-- High-pass @30 Hz, low-pass @1200 Hz.
-- Soft clipping (tanh) to blend peaks into bed.
-- Light reverb (0.35s IR, ~14% wet).
-- ±5 ms timing jitter, ±2 dB gain jitter per beat.
-
---------------------------------
-RETURN FORMAT (only JSON, no extra text):
+Return JSON only with this schema:
 {
-  "bpm": number,
-  "confidence": number (0–1),
-  "audioCharacteristics": {
-    "systolicIntensity": number,
-    "diastolicIntensity": number,
-    "frequencyRange": {
-      "systolic": {"min": number, "max": number},
-      "diastolic": {"min": number, "max": number}
-    },
-    "rhythm": "regular" | "irregular" | "variable",
-    "backgroundNoiseLevel": "low" | "medium" | "high"
-  },
-  "analysis": "Brief explanation of BPM determination",
-  "base64AudioWav": "string (optional — base64-encoded 4–6s Doppler-style heartbeat)"
+  "bpm": number,                        // exact if shown; else estimated or 140
+  "confidence": number,                 // 0..1 for bpm confidence
+  "beat_times_sec": number[],           // ascending onsets within [0, 8), e.g. [0.12, 0.50, 0.89, ...]
+  "double_pulse_offset_ms": number|null,// e.g. 55 if two sub-bursts per beat; null if single
+  "amplitude_scalars": number[]         // 0..1, same length as beat_times_sec; default 0.8 if unknown
 }
---------------------------------
-RULE:
-- Only adjust intensities or frequencies if the waveform clearly suggests it; otherwise use baseline.
-- Ensure tonal profile matches the YouTube reference exactly.
+
+Constraints:
+- beat_times_sec must fit in [0, 8).
+- If using uniform timing from BPM, align the first beat near 0.12–0.20 s and continue at exact period (60 / bpm).
+- amplitude_scalars should vary gently (±5–8%) unless the waveform clearly shows stronger variation.
+
+Return only valid JSON. No prose.
 `;
 
       console.log('🔍 Making API request to GPT-4 Vision...');
@@ -184,31 +134,33 @@ RULE:
    * Validate and enhance the GPT analysis with reasonable defaults
    */
   private static validateAndEnhanceAnalysis(result: Record<string, unknown>): UltrasoundAnalysis {
-    const audioChars = result.audioCharacteristics as Record<string, unknown> || {};
-    const freqRange = audioChars.frequencyRange as Record<string, unknown> || {};
-    const systolic = freqRange.systolic as Record<string, unknown> || {};
-    const diastolic = freqRange.diastolic as Record<string, unknown> || {};
-
+    const bpm = this.validateBPM((result.bpm as number) || 140);
+    const confidence = Math.max(0, Math.min(1, (result.confidence as number) || 0.5));
+    
+    // Get beat times or generate uniform timing
+    let beatTimes = result.beat_times_sec as number[] || [];
+    if (beatTimes.length === 0) {
+      // Generate uniform timing from BPM over 8 seconds
+      const beatInterval = 60 / bpm;
+      beatTimes = [];
+      for (let time = 0.15; time < 8.0; time += beatInterval) {
+        beatTimes.push(time);
+      }
+    }
+    
+    // Get amplitude scalars or use defaults
+    let amplitudeScalars = result.amplitude_scalars as number[] || [];
+    if (amplitudeScalars.length !== beatTimes.length) {
+      // Generate gentle amplitude variation around 0.8
+      amplitudeScalars = beatTimes.map(() => 0.8 + (Math.random() - 0.5) * 0.08); // ±4% variation
+    }
+    
     return {
-      bpm: this.validateBPM((result.bpm as number) || 140),
-      confidence: Math.max(0, Math.min(1, (result.confidence as number) || 0.5)),
-      audioCharacteristics: {
-        systolicIntensity: Math.max(0.8, Math.min(0.95, (audioChars.systolicIntensity as number) || 0.85)),
-        diastolicIntensity: Math.max(0.5, Math.min(0.75, (audioChars.diastolicIntensity as number) || 0.6)),
-        frequencyRange: {
-          systolic: {
-            min: Math.max(80, Math.min(150, (systolic.min as number) || 100)),
-            max: Math.max(150, Math.min(1000, (systolic.max as number) || 200))
-          },
-          diastolic: {
-            min: Math.max(50, Math.min(120, (diastolic.min as number) || 70)),
-            max: Math.max(120, Math.min(200, (diastolic.max as number) || 100))
-          }
-        },
-        rhythm: (audioChars.rhythm as 'regular' | 'irregular' | 'variable') || 'regular',
-        backgroundNoiseLevel: (audioChars.backgroundNoiseLevel as 'low' | 'medium' | 'high') || 'low'
-      },
-      analysis: (result.analysis as string) || 'GPT-4 Vision analysis completed'
+      bpm,
+      confidence,
+      beat_times_sec: beatTimes,
+      double_pulse_offset_ms: (result.double_pulse_offset_ms as number) || null,
+      amplitude_scalars: amplitudeScalars
     };
   }
 
@@ -218,21 +170,24 @@ RULE:
   private static extractFromText(content: string): UltrasoundAnalysis {
     const bpmMatch = content.match(/(\d{3})\s*(?:BPM|bpm|beats?)/i);
     const bpm = bpmMatch ? parseInt(bpmMatch[1]) : 140;
+    const validatedBpm = this.validateBPM(bpm);
+
+    // Generate uniform timing over 8 seconds
+    const beatInterval = 60 / validatedBpm;
+    const beatTimes: number[] = [];
+    for (let time = 0.15; time < 8.0; time += beatInterval) {
+      beatTimes.push(time);
+    }
+
+    // Generate gentle amplitude variation
+    const amplitudeScalars = beatTimes.map(() => 0.8 + (Math.random() - 0.5) * 0.08);
 
     return {
-      bpm: this.validateBPM(bpm),
+      bpm: validatedBpm,
       confidence: 0.6,
-      audioCharacteristics: {
-        systolicIntensity: 0.85,
-        diastolicIntensity: 0.6,
-        frequencyRange: {
-          systolic: { min: 100, max: 200 },
-          diastolic: { min: 70, max: 100 }
-        },
-        rhythm: 'regular',
-        backgroundNoiseLevel: 'low'
-      },
-      analysis: content
+      beat_times_sec: beatTimes,
+      double_pulse_offset_ms: null,
+      amplitude_scalars: amplitudeScalars
     };
   }
 
@@ -240,20 +195,21 @@ RULE:
    * Get default analysis when GPT fails
    */
   private static getDefaultAnalysis(): UltrasoundAnalysis {
+    const bpm = 140;
+    const beatInterval = 60 / bpm;
+    const beatTimes: number[] = [];
+    for (let time = 0.15; time < 8.0; time += beatInterval) {
+      beatTimes.push(time);
+    }
+
+    const amplitudeScalars = beatTimes.map(() => 0.8 + (Math.random() - 0.5) * 0.08);
+
     return {
-      bpm: 140,
+      bpm,
       confidence: 0.3,
-      audioCharacteristics: {
-        systolicIntensity: 0.85,
-        diastolicIntensity: 0.6,
-        frequencyRange: {
-          systolic: { min: 100, max: 200 },
-          diastolic: { min: 70, max: 100 }
-        },
-        rhythm: 'regular',
-        backgroundNoiseLevel: 'low'
-      },
-      analysis: 'Default analysis due to GPT failure'
+      beat_times_sec: beatTimes,
+      double_pulse_offset_ms: null,
+      amplitude_scalars: amplitudeScalars
     };
   }
 
@@ -282,20 +238,21 @@ RULE:
 
           // For now, return a reasonable default based on typical fetal heart rates
           // In a real implementation, you'd use a proper OCR library
+          const bpm = 155;
+          const beatInterval = 60 / bpm;
+          const beatTimes: number[] = [];
+          for (let time = 0.15; time < 8.0; time += beatInterval) {
+            beatTimes.push(time);
+          }
+
+          const amplitudeScalars = beatTimes.map(() => 0.8 + (Math.random() - 0.5) * 0.08);
+
           resolve({
-            bpm: 155, // Default based on typical fetal heart rate
+            bpm,
             confidence: 0.7,
-            audioCharacteristics: {
-              systolicIntensity: 0.85,
-              diastolicIntensity: 0.6,
-              frequencyRange: {
-                systolic: { min: 100, max: 200 },
-                diastolic: { min: 70, max: 100 }
-              },
-              rhythm: 'regular',
-              backgroundNoiseLevel: 'low'
-            },
-            analysis: 'Fallback analysis: Using typical fetal heart rate characteristics'
+            beat_times_sec: beatTimes,
+            double_pulse_offset_ms: null,
+            amplitude_scalars: amplitudeScalars
           });
         };
 
