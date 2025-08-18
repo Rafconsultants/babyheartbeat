@@ -377,11 +377,11 @@ export class AudioGenerator {
     return result.audioUrl;
   }
 
-  static async generateSimpleHeartbeat(bmp: number, duration: number = 8, gptAnalysis?: UltrasoundAnalysis): Promise<string> {
+  static async generateSimpleHeartbeat(bpm: number, duration: number = 8, gptAnalysis?: UltrasoundAnalysis): Promise<string> {
     console.log('🎵 Using legacy method - delegating to new noise-burst model');
     
     const options: AudioGenerationOptions = {
-      bpm: bmp,
+      bpm,
       duration,
       sampleRate: 44100,
       isWatermarked: false,
