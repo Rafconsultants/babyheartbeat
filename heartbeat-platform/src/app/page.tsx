@@ -9,7 +9,7 @@ import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer' // Updated
 import { AudioGenerator } from '@/lib/audio-generator' // Updated import
 import { ReferenceAudioLoader, ReferenceAudioInfo } from '@/lib/reference-audio-loader' // Reference audio support
 import { testOpenAIAPI } from '@/lib/api-test' // Add API test import
-import { RealisticDopplerSynthesizer } from '@/lib/realistic-doppler-synthesizer' // Focused realistic Doppler synthesizer
+import { ReferenceMatchedDopplerSynthesizer } from '@/lib/reference-matched-doppler-synthesizer' // Reference-matched Doppler synthesizer
 
 export default function Home() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -174,19 +174,42 @@ export default function Home() {
       // Test 2: Generate authentic Doppler heartbeat audio
       console.log('🧪 Step 2: Generating authentic Doppler heartbeat...');
       
+      // Create default reference analysis for testing
+      const defaultReferenceAnalysis = {
+        pulseToNoiseRatio: 8.5,
+        beatEnvelope: {
+          attack: 8, // ms
+          sustain: 15, // ms
+          decay: 80 // ms
+        },
+        spectralProfile: {
+          thumpBand: { min: 150, max: 300, emphasis: 1.0 },
+          hissBand: { min: 800, max: 1500, level: 0.3 },
+          overallBalance: 0.0
+        },
+        backgroundNoise: {
+          modulationDepth: 0.6,
+          gatingBehavior: 0.8,
+          baseLevel: 0.02
+        },
+        timingVariability: 15, // ms
+        doublePulseSpacing: 55, // ms
+        doublePulseAmplitude: 0.6
+      };
+
       const dopplerOptions = {
         bpm: bpm,
         duration: 8.0,
         sampleRate: 44100,
+        referenceAnalysis: defaultReferenceAnalysis,
         hasDoublePulse: true, // Enable double-pulse for realism
-        doublePulseOffset: 55, // 55ms between primary and secondary pulse
         timingVariability: 15, // ±15ms timing variation
         amplitudeVariation: 0.1 // 10% amplitude variation
       };
       
       console.log('🧪 Doppler options:', dopplerOptions);
       
-      const dopplerResult = await RealisticDopplerSynthesizer.generateRealisticDoppler(dopplerOptions);
+      const dopplerResult = await ReferenceMatchedDopplerSynthesizer.generateReferenceMatchedDoppler(dopplerOptions);
       
       console.log('🧪 Doppler heartbeat generation successful:', dopplerResult);
       console.log('🧪 Audio blob size:', dopplerResult.fileSize, 'bytes');
@@ -230,24 +253,47 @@ export default function Home() {
 
   // Simple test function to verify Doppler synthesizer works
   const testDopplerSynthesizer = async () => {
-    console.log('🧪 Testing realistic Doppler synthesizer directly...');
+    console.log('🧪 Testing reference-matched Doppler synthesizer directly...');
     
     try {
+      // Create default reference analysis for testing
+      const defaultReferenceAnalysis = {
+        pulseToNoiseRatio: 8.5,
+        beatEnvelope: {
+          attack: 8, // ms
+          sustain: 15, // ms
+          decay: 80 // ms
+        },
+        spectralProfile: {
+          thumpBand: { min: 150, max: 300, emphasis: 1.0 },
+          hissBand: { min: 800, max: 1500, level: 0.3 },
+          overallBalance: 0.0
+        },
+        backgroundNoise: {
+          modulationDepth: 0.6,
+          gatingBehavior: 0.8,
+          baseLevel: 0.02
+        },
+        timingVariability: 15, // ms
+        doublePulseSpacing: 55, // ms
+        doublePulseAmplitude: 0.6
+      };
+
       const dopplerOptions = {
         bpm: 155,
         duration: 8.0,
         sampleRate: 44100,
-        hasDoublePulse: true,
-        doublePulseOffset: 55,
-        timingVariability: 15,
-        amplitudeVariation: 0.1
+        referenceAnalysis: defaultReferenceAnalysis,
+        hasDoublePulse: true, // Enable double-pulse for realism
+        timingVariability: 15, // ±15ms timing variation
+        amplitudeVariation: 0.1 // 10% amplitude variation
       };
       
       console.log('🧪 Testing with options:', dopplerOptions);
       
-      const dopplerResult = await RealisticDopplerSynthesizer.generateRealisticDoppler(dopplerOptions);
+      const dopplerResult = await ReferenceMatchedDopplerSynthesizer.generateReferenceMatchedDoppler(dopplerOptions);
       
-      console.log('🧪 Realistic Doppler test successful:', dopplerResult);
+      console.log('🧪 Reference-matched Doppler test successful:', dopplerResult);
       
       // Create result for display
       const testResult: AudioGenerationResponse = {
@@ -255,9 +301,9 @@ export default function Home() {
         bpm: dopplerResult.bpm,
         isWatermarked: false,
         confidence: 0.9,
-        method: 'gpt-vision',
-        source: 'Direct realistic Doppler synthesizer test',
-        analysis: 'Realistic fetal Doppler ultrasound test audio generated successfully'
+        method: 'reference-matched',
+        source: 'Direct reference-matched Doppler synthesizer test',
+        analysis: 'Reference-matched fetal Doppler ultrasound test audio generated successfully'
       };
       
       setResult(testResult);
@@ -267,16 +313,16 @@ export default function Home() {
         progress: 100
       });
       
-      console.log('🧪 Realistic Doppler synthesizer test completed successfully!');
+      console.log('🧪 Reference-matched Doppler synthesizer test completed successfully!');
       
     } catch (error) {
-      console.error('🧪 Realistic Doppler synthesizer test failed:', error);
-      setError(`Realistic Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('🧪 Reference-matched Doppler synthesizer test failed:', error);
+      setError(`Reference-matched Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setProcessingState({
         isProcessing: false,
         step: 'error',
         progress: 0,
-        error: `Realistic Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        error: `Reference-matched Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
   };
