@@ -21,6 +21,7 @@ export default function Home() {
   const [apiStatus, setApiStatus] = useState<'checking' | 'available' | 'unavailable'>('checking')
   const [referenceAudio, setReferenceAudio] = useState<ReferenceAudioInfo | null>(null)
   const [useReferenceAudio, setUseReferenceAudio] = useState(false)
+  const [isTestMode, setIsTestMode] = useState(true) // Start in test mode
 
   // Check API status on component mount
   useEffect(() => {
@@ -87,6 +88,55 @@ export default function Home() {
 
     } catch (error) {
       console.error('🧪 Basic functionality test failed:', error);
+    }
+  };
+
+  // Simple test function that only tests image analysis without audio generation
+  const testImageAnalysisOnly = async (file: File) => {
+    console.log('🧪 Testing image analysis only...');
+    console.log('🧪 File:', file.name, 'Size:', file.size, 'Type:', file.type);
+    
+    try {
+      // Test 1: Just try to analyze the image
+      console.log('🧪 Step 1: Testing image analysis...');
+      const analysis = await GPTUltrasoundAnalyzer.analyzeUltrasound(file);
+      console.log('🧪 Image analysis successful:', analysis);
+      
+      // Test 2: Create a simple result without audio generation
+      console.log('🧪 Step 2: Creating simple result...');
+      const simpleResult: AudioGenerationResponse = {
+        audioUrl: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT',
+        bpm: analysis.bpm,
+        isWatermarked: false,
+        confidence: analysis.confidence,
+        method: 'gpt-vision',
+        source: 'Test analysis only - no audio generation',
+        analysis: analysis.analysis
+      };
+      
+      console.log('🧪 Simple result created:', simpleResult);
+      setResult(simpleResult);
+      setProcessingState({
+        isProcessing: false,
+        step: 'complete',
+        progress: 100
+      });
+      
+      console.log('🧪 Image analysis test completed successfully!');
+      
+    } catch (error) {
+      console.error('🧪 Image analysis test failed:', error);
+      console.error('🧪 Error type:', typeof error);
+      console.error('🧪 Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('🧪 Error stack:', (error as Error)?.stack);
+      
+      setError(`Image analysis test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setProcessingState({
+        isProcessing: false,
+        step: 'error',
+        progress: 0,
+        error: `Image analysis test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
     }
   };
 
@@ -369,18 +419,56 @@ export default function Home() {
         {!processingState.isProcessing && !result && (
           <div className="mb-12">
             <div className="max-w-2xl mx-auto space-y-4">
-              {/* Test Button */}
+              {/* Mode Toggle */}
               <div className="text-center">
-                <button
-                  onClick={testBasicFunctionality}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
-                >
-                  🧪 Test System Functionality
-                </button>
-                <p className="text-xs text-gray-500 mt-2">Check browser console for test results</p>
+                <div className="inline-flex items-center bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setIsTestMode(true)}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isTestMode 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    🧪 Test Mode
+                  </button>
+                  <button
+                    onClick={() => setIsTestMode(false)}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      !isTestMode 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    🎵 Full Mode
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  {isTestMode 
+                    ? 'Test mode: Only analyzes image, no audio generation' 
+                    : 'Full mode: Complete image analysis and audio generation'
+                  }
+                </p>
               </div>
+
+              {/* Test Buttons */}
+              {isTestMode && (
+                <div className="text-center space-y-2">
+                  <button
+                    onClick={testBasicFunctionality}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+                  >
+                    🧪 Test System Functionality
+                  </button>
+                  <p className="text-xs text-gray-500">Check browser console for test results</p>
+                </div>
+              )}
               
-              <ImageUpload onImageSelect={handleImageSelect} onError={handleError} className="max-w-2xl mx-auto" />
+              <ImageUpload 
+                onImageSelect={isTestMode ? testImageAnalysisOnly : handleImageSelect} 
+                onError={handleError} 
+                className="max-w-2xl mx-auto" 
+              />
             </div>
           </div>
         )}
