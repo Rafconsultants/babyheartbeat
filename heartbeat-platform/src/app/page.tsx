@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { AudioGenerationResponse, ProcessingState } from '@/types'
 import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer'
-import { CleanFetalDopplerSynthesizer } from '@/lib/clean-fetal-doppler'
+import { UltrasoundDopplerSynthesizer } from '@/lib/ultrasound-doppler-synthesizer'
 import ImageUpload from '@/components/ImageUpload'
 import UltrasoundSimulator from '@/components/UltrasoundSimulator'
 
@@ -43,8 +43,8 @@ export default function Home() {
         progress: 75
       });
 
-      // Step 2: Generate clean fetal Doppler audio
-      console.log('🎵 Generating clean fetal Doppler audio...');
+      // Step 2: Generate ultrasound Doppler audio
+      console.log('🎵 Generating ultrasound Doppler audio...');
       const dopplerOptions = {
         bpm: analysis.bpm,
         duration: 8.0,
@@ -54,7 +54,7 @@ export default function Home() {
         amplitudeScalars: analysis.amplitude_scalars || []
       };
 
-      const dopplerResult = await CleanFetalDopplerSynthesizer.generateCleanFetalDoppler(dopplerOptions);
+      const dopplerResult = await UltrasoundDopplerSynthesizer.generateUltrasoundDoppler(dopplerOptions);
       console.log('🎵 Audio generation successful:', dopplerResult);
 
       // Create result
@@ -63,7 +63,7 @@ export default function Home() {
         bpm: dopplerResult.bpm,
         isWatermarked: false,
         confidence: analysis.confidence,
-        method: 'clean-fetal-doppler',
+        method: 'ultrasound-doppler',
         source: 'Ultrasound image analysis',
         analysis: analysis.analysis
       };
