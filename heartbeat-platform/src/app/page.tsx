@@ -75,8 +75,14 @@ export default function Home() {
 
       // Enhanced GPT-4 Vision analysis with detailed audio characteristics
       console.log('🚀 Calling GPTUltrasoundAnalyzer.analyzeUltrasound...');
-      const gptAnalysis = await GPTUltrasoundAnalyzer.analyzeUltrasound(file)
-      console.log('🚀 GPT Analysis completed:', gptAnalysis);
+      let gptAnalysis;
+      try {
+        gptAnalysis = await GPTUltrasoundAnalyzer.analyzeUltrasound(file);
+        console.log('🚀 GPT Analysis completed:', gptAnalysis);
+      } catch (analysisError) {
+        console.error('❌ GPT Analysis failed:', analysisError);
+        throw new Error(`Image analysis failed: ${analysisError instanceof Error ? analysisError.message : 'Unknown error'}`);
+      }
 
       // Step 2: Generate audio based on detailed GPT analysis
       console.log('🚀 Step 2: Starting audio generation...');
@@ -87,41 +93,47 @@ export default function Home() {
       })
 
       // Generate authentic fetal Doppler ultrasound heartbeat audio using GPT-4 Vision analysis
-      console.log('🚀 Calling AudioGenerator.generateFetalDopplerHeartbeat...');
+      console.log('🚀 Calling AudioGenerator.generateHeartbeatAudio...');
       
       let audioUrl: string;
       let referenceMatched = false;
       
-      if (useReferenceAudio && referenceAudio?.audioBuffer) {
-        // Use reference audio for enhanced synthesis
-        console.log('🎵 Using reference audio for enhanced synthesis');
-        const audioResult = await AudioGenerator.generateWithReferenceMatching(
-          {
+      try {
+        if (useReferenceAudio && referenceAudio?.audioBuffer) {
+          // Use reference audio for enhanced synthesis
+          console.log('🎵 Using reference audio for enhanced synthesis');
+          const audioResult = await AudioGenerator.generateWithReferenceMatching(
+            {
+              bpm: gptAnalysis.bpm,
+              duration: 8,
+              sampleRate: 44100,
+              isWatermarked: true,
+              gptAnalysis: gptAnalysis,
+              stereo: true
+            },
+            referenceAudio.audioBuffer
+          );
+          audioUrl = audioResult.audioUrl;
+          referenceMatched = audioResult.referenceMatched;
+        } else {
+          // Use standard synthesis with noise burst synthesizer
+          console.log('🎵 Using standard noise burst synthesis');
+          const audioResult = await AudioGenerator.generateHeartbeatAudio({
             bpm: gptAnalysis.bpm,
             duration: 8,
             sampleRate: 44100,
             isWatermarked: true,
             gptAnalysis: gptAnalysis,
             stereo: true
-          },
-          referenceAudio.audioBuffer
-        );
-        audioUrl = audioResult.audioUrl;
-        referenceMatched = audioResult.referenceMatched;
-      } else {
-        // Use standard synthesis with noise burst synthesizer
-        const audioResult = await AudioGenerator.generateHeartbeatAudio({
-          bpm: gptAnalysis.bpm,
-          duration: 8,
-          sampleRate: 44100,
-          isWatermarked: true,
-          gptAnalysis: gptAnalysis,
-          stereo: true
-        });
-        audioUrl = audioResult.audioUrl;
+          });
+          audioUrl = audioResult.audioUrl;
+        }
+        
+        console.log('🚀 Audio generation completed, URL:', audioUrl);
+      } catch (audioError) {
+        console.error('❌ Audio generation failed:', audioError);
+        throw new Error(`Audio generation failed: ${audioError instanceof Error ? audioError.message : 'Unknown error'}`);
       }
-      
-      console.log('🚀 Audio generation completed, URL:', audioUrl);
 
       // Create the result with enhanced GPT analysis
       const finalResult: AudioGenerationResponse = {
@@ -148,12 +160,14 @@ export default function Home() {
 
     } catch (err) {
       console.error('❌ Processing failed:', err);
-      setError('Unable to process your image at this time. Please try again.')
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('❌ Error details:', errorMessage);
+      setError(`Unable to process your image: ${errorMessage}`)
       setProcessingState({
         isProcessing: false,
         step: 'error',
         progress: 0,
-        error: 'Unable to process your image at this time. Please try again.'
+        error: `Unable to process your image: ${errorMessage}`
       })
     }
   }

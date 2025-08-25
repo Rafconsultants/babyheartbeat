@@ -32,9 +32,35 @@ export class NoiseBurstDopplerSynthesizer {
     console.log('🎵 Starting noise burst Doppler synthesis');
 
     try {
-      if (!this.audioContext) {
-        this.audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined') {
+        throw new Error('Not in browser environment');
       }
+
+      // Create AudioContext with better error handling
+      if (!this.audioContext) {
+        try {
+          // Try standard AudioContext first
+          this.audioContext = new AudioContext();
+        } catch (error) {
+          console.warn('🎵 Standard AudioContext failed, trying webkitAudioContext:', error);
+          try {
+            // Fallback to webkitAudioContext for older browsers
+            this.audioContext = new (window as any).webkitAudioContext();
+          } catch (webkitError) {
+            console.error('🎵 Both AudioContext and webkitAudioContext failed:', webkitError);
+            throw new Error('AudioContext not supported in this browser');
+          }
+        }
+      }
+
+      // Resume AudioContext if suspended (required for user interaction)
+      if (this.audioContext.state === 'suspended') {
+        console.log('🎵 Resuming suspended AudioContext');
+        await this.audioContext.resume();
+      }
+
+      console.log('🎵 AudioContext state:', this.audioContext.state);
 
       const audioBuffer = await this.createNoiseBurstDopplerWaveform(options);
       const audioBlob = await this.audioBufferToBlob(audioBuffer);
@@ -49,7 +75,7 @@ export class NoiseBurstDopplerSynthesizer {
       };
     } catch (error) {
       console.error('❌ Noise burst Doppler synthesis failed:', error);
-      throw new Error('Failed to generate noise burst Doppler heartbeat audio');
+      throw new Error(`Failed to generate noise burst Doppler heartbeat audio: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
