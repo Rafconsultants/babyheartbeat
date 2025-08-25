@@ -5,6 +5,7 @@ import { AudioGenerationResponse, ProcessingState } from '@/types'
 import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer'
 import { SoftMuffledDopplerSynthesizer } from '@/lib/soft-muffled-doppler'
 import ImageUpload from '@/components/ImageUpload'
+import UltrasoundSimulator from '@/components/UltrasoundSimulator'
 
 export default function Home() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -15,6 +16,8 @@ export default function Home() {
     step: 'uploading',
     progress: 0
   });
+  const [simulatorBPM, setSimulatorBPM] = useState<number>(140);
+  const [showSimulator, setShowSimulator] = useState<boolean>(false);
 
   // Handle image selection and processing
   const handleImageSelect = async (file: File) => {
@@ -97,6 +100,50 @@ export default function Home() {
           <p className="text-lg text-gray-600">
             Upload your ultrasound image to generate realistic fetal heartbeat sounds
           </p>
+        </div>
+
+        {/* Ultrasound Simulator */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900">Ultrasound Simulator</h2>
+            <button
+              onClick={() => setShowSimulator(!showSimulator)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              {showSimulator ? 'Hide Simulator' : 'Show Simulator'}
+            </button>
+          </div>
+          
+          {showSimulator && (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <label className="text-gray-700 font-medium">Heart Rate (BPM):</label>
+                <input
+                  type="range"
+                  min="110"
+                  max="160"
+                  value={simulatorBPM}
+                  onChange={(e) => setSimulatorBPM(Number(e.target.value))}
+                  className="flex-1"
+                />
+                <span className="text-lg font-semibold text-gray-900 w-16">{simulatorBPM}</span>
+              </div>
+              
+              <div className="h-96 border border-gray-300 rounded-lg overflow-hidden">
+                <UltrasoundSimulator 
+                  bpm={simulatorBPM} 
+                  isActive={showSimulator}
+                  className="w-full h-full"
+                />
+              </div>
+              
+              <p className="text-sm text-gray-600">
+                This simulator shows a realistic M-mode ultrasound display with a 2D fetal heart view above 
+                and a rhythmic waveform below. The waveform shows repeating vertical spikes representing 
+                heart contractions at the selected heart rate.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Main Upload Area */}
