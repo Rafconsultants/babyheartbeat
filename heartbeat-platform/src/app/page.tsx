@@ -10,6 +10,7 @@ import { AudioGenerator } from '@/lib/audio-generator' // Updated import
 import { ReferenceAudioLoader, ReferenceAudioInfo } from '@/lib/reference-audio-loader' // Reference audio support
 import { testOpenAIAPI } from '@/lib/api-test' // Add API test import
 import { AuthenticDopplerSynthesizer } from '@/lib/authentic-doppler-synthesizer' // Comprehensive authentic Doppler synthesizer
+import { GPTDopplerSynthesizer } from '@/lib/gpt-doppler-synthesizer' // Focused GPT-based Doppler synthesizer
 
 export default function Home() {
   const [processingState, setProcessingState] = useState<ProcessingState>({
@@ -184,13 +185,12 @@ export default function Home() {
         doublePulseOffset: 55, // 55ms between primary and secondary pulse
         timingVariability: 15, // ±15ms timing variation
         amplitudeVariation: 0.1, // 10% amplitude variation
-        stereo: true,
-        useReverb: true
+        backgroundLevel: -42 // -42 dBFS pink noise floor
       };
       
-      console.log('🧪 Doppler options:', dopplerOptions);
+      console.log('🧪 GPT Doppler options:', dopplerOptions);
       
-      const dopplerResult = await AuthenticDopplerSynthesizer.generateAuthenticDoppler(dopplerOptions);
+      const dopplerResult = await GPTDopplerSynthesizer.generateGPTDoppler(dopplerOptions);
       
       console.log('🧪 Doppler heartbeat generation successful:', dopplerResult);
       console.log('🧪 Audio blob size:', dopplerResult.fileSize, 'bytes');
@@ -202,7 +202,7 @@ export default function Home() {
         isWatermarked: false,
         confidence: confidence,
         method: 'gpt-vision',
-        source: 'Authentic Doppler heartbeat synthesis with noise bursts',
+        source: 'GPT-based fetal Doppler ultrasound synthesis',
         analysis: analysis
       };
       
@@ -234,7 +234,7 @@ export default function Home() {
 
   // Simple test function to verify Doppler synthesizer works
   const testDopplerSynthesizer = async () => {
-    console.log('🧪 Testing authentic Doppler synthesizer directly...');
+    console.log('🧪 Testing GPT-based fetal Doppler synthesizer...');
     
     try {
       const dopplerOptions = {
@@ -242,18 +242,17 @@ export default function Home() {
         duration: 8.0,
         sampleRate: 44100,
         hasDoublePulse: true,
-        doublePulseOffset: 55,
-        timingVariability: 15,
-        amplitudeVariation: 0.1,
-        stereo: true,
-        useReverb: true
+        doublePulseOffset: 55, // 55ms between primary and secondary pulse
+        timingVariability: 15, // ±15ms timing variation
+        amplitudeVariation: 0.1, // 10% amplitude variation
+        backgroundLevel: -42 // -42 dBFS pink noise floor
       };
       
-      console.log('🧪 Testing with options:', dopplerOptions);
+      console.log('🧪 Testing with GPT Doppler options:', dopplerOptions);
       
-      const dopplerResult = await AuthenticDopplerSynthesizer.generateAuthenticDoppler(dopplerOptions);
+      const dopplerResult = await GPTDopplerSynthesizer.generateGPTDoppler(dopplerOptions);
       
-      console.log('🧪 Authentic Doppler test successful:', dopplerResult);
+      console.log('🧪 GPT Doppler test successful:', dopplerResult);
       
       // Create result for display
       const testResult: AudioGenerationResponse = {
@@ -262,8 +261,8 @@ export default function Home() {
         isWatermarked: false,
         confidence: 0.9,
         method: 'gpt-vision',
-        source: 'Direct authentic Doppler synthesizer test',
-        analysis: 'Authentic fetal Doppler ultrasound test audio generated successfully'
+        source: 'GPT-based fetal Doppler ultrasound synthesis',
+        analysis: 'Realistic fetal Doppler heartbeat with noise bursts, band-pass filtering, and dynamic background'
       };
       
       setResult(testResult);
@@ -273,16 +272,16 @@ export default function Home() {
         progress: 100
       });
       
-      console.log('🧪 Authentic Doppler synthesizer test completed successfully!');
+      console.log('🧪 GPT-based fetal Doppler synthesizer test completed successfully!');
       
     } catch (error) {
-      console.error('🧪 Authentic Doppler synthesizer test failed:', error);
-      setError(`Authentic Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('🧪 GPT-based fetal Doppler synthesizer test failed:', error);
+      setError(`GPT-based fetal Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setProcessingState({
         isProcessing: false,
         step: 'error',
         progress: 0,
-        error: `Authentic Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        error: `GPT-based fetal Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
   };
