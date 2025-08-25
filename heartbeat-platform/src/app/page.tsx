@@ -23,6 +23,8 @@ export default function Home() {
   const [useReferenceAudio, setUseReferenceAudio] = useState(false)
   const [isTestMode, setIsTestMode] = useState(true) // Start in test mode
   const [testModeType, setTestModeType] = useState<'analysis' | 'simple-audio' | 'full'>('analysis') // Test mode type
+  const [manualBPM, setManualBPM] = useState(155) // Manual BPM input
+  const [useManualBPM, setUseManualBPM] = useState(false) // Use manual BPM instead of analysis
 
   // Check API status on component mount
   useEffect(() => {
@@ -147,10 +149,28 @@ export default function Home() {
     console.log('🧪 File:', file.name, 'Size:', file.size, 'Type:', file.type);
     
     try {
-      // Test 1: Analyze the image
-      console.log('🧪 Step 1: Testing image analysis...');
-      const analysis = await GPTUltrasoundAnalyzer.analyzeUltrasound(file);
-      console.log('🧪 Image analysis successful:', analysis);
+      // Test 1: Analyze the image (or use manual BPM)
+      console.log('🧪 Step 1: Getting BPM...');
+      let bpm = manualBPM;
+      let confidence = 0.8;
+      let analysis = 'Manual BPM input';
+      
+      if (!useManualBPM) {
+        try {
+          const gptAnalysis = await GPTUltrasoundAnalyzer.analyzeUltrasound(file);
+          bpm = gptAnalysis.bpm;
+          confidence = gptAnalysis.confidence;
+          analysis = gptAnalysis.analysis;
+          console.log('🧪 GPT analysis successful:', gptAnalysis);
+        } catch (analysisError) {
+          console.warn('🧪 GPT analysis failed, using manual BPM:', analysisError);
+          bpm = manualBPM;
+          confidence = 0.6;
+          analysis = 'GPT analysis failed - using manual BPM';
+        }
+      }
+      
+      console.log('🧪 Using BPM:', bpm);
       
       // Test 2: Create a simple audio file
       console.log('🧪 Step 2: Creating simple audio file...');
@@ -177,19 +197,35 @@ export default function Home() {
 
       console.log('🧪 AudioContext state:', audioContext.state);
 
-      // Create a simple 8-second audio buffer with a basic tone
+      // Create a simple 8-second audio buffer with heartbeat pattern
       const sampleRate = 44100;
       const duration = 8;
       const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
       const channelData = buffer.getChannelData(0);
 
-      // Generate a simple tone at the BPM frequency
-      const frequency = analysis.bpm / 60; // Convert BPM to Hz
-      const amplitude = 0.3;
+      // Generate heartbeat pattern
+      const beatInterval = 60 / bpm; // Time between beats in seconds
+      const beatDuration = 0.1; // Duration of each beat in seconds
+      const beatAmplitude = 0.3;
       
+      // Fill the buffer with silence first
       for (let i = 0; i < channelData.length; i++) {
-        const time = i / sampleRate;
-        channelData[i] = Math.sin(2 * Math.PI * frequency * time) * amplitude;
+        channelData[i] = 0;
+      }
+      
+      // Add heartbeat sounds
+      for (let beatTime = 0.2; beatTime < duration; beatTime += beatInterval) {
+        const startSample = Math.floor(beatTime * sampleRate);
+        const endSample = Math.min(startSample + Math.floor(beatDuration * sampleRate), channelData.length);
+        
+        // Create a simple "thump" sound for each beat
+        for (let i = startSample; i < endSample; i++) {
+          const timeInBeat = (i - startSample) / sampleRate;
+          const envelope = Math.exp(-timeInBeat * 10); // Quick decay
+          const frequency = 150 + Math.random() * 50; // Random frequency around 150-200 Hz
+          const sample = Math.sin(2 * Math.PI * frequency * timeInBeat) * beatAmplitude * envelope;
+          channelData[i] += sample;
+        }
       }
 
       console.log('🧪 Simple audio buffer created');
@@ -204,12 +240,12 @@ export default function Home() {
       // Create result
       const simpleResult: AudioGenerationResponse = {
         audioUrl: audioUrl,
-        bpm: analysis.bpm,
+        bpm: bpm,
         isWatermarked: false,
-        confidence: analysis.confidence,
+        confidence: confidence,
         method: 'gpt-vision',
         source: 'Simple audio generation test',
-        analysis: analysis.analysis
+        analysis: analysis
       };
       
       console.log('🧪 Simple audio result created:', simpleResult);
@@ -625,6 +661,46 @@ export default function Home() {
                     🧪 Test System Functionality
                   </button>
                   <p className="text-xs text-gray-500">Check browser console for test results</p>
+                </div>
+              )}
+
+              {/* Manual BPM Input */}
+              {isTestMode && testModeType === 'simple-audio' && (
+                <div className="bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 text-center">🎯 Manual BPM Input</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        id="useManualBPM"
+                        checked={useManualBPM}
+                        onChange={(e) => setUseManualBPM(e.target.checked)}
+                        className="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="useManualBPM" className="text-sm font-medium text-gray-700">
+                        Use manual BPM instead of image analysis
+                      </label>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label htmlFor="manualBPM" className="block text-sm font-medium text-gray-700">
+                        BPM Value (110-160)
+                      </label>
+                      <input
+                        type="number"
+                        id="manualBPM"
+                        min="110"
+                        max="160"
+                        value={manualBPM}
+                        onChange={(e) => setManualBPM(parseInt(e.target.value) || 155)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                        placeholder="155"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Enter the BPM value you see in the ultrasound image
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
               
