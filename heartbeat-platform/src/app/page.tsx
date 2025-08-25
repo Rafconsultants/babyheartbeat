@@ -22,6 +22,7 @@ export default function Home() {
   const [referenceAudio, setReferenceAudio] = useState<ReferenceAudioInfo | null>(null)
   const [useReferenceAudio, setUseReferenceAudio] = useState(false)
   const [isTestMode, setIsTestMode] = useState(true) // Start in test mode
+  const [testModeType, setTestModeType] = useState<'analysis' | 'simple-audio' | 'full'>('analysis') // Test mode type
 
   // Check API status on component mount
   useEffect(() => {
@@ -138,6 +139,160 @@ export default function Home() {
         error: `Image analysis test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
+  };
+
+  // Simple audio generation test that creates a basic audio file
+  const testSimpleAudioGeneration = async (file: File) => {
+    console.log('🧪 Testing simple audio generation...');
+    console.log('🧪 File:', file.name, 'Size:', file.size, 'Type:', file.type);
+    
+    try {
+      // Test 1: Analyze the image
+      console.log('🧪 Step 1: Testing image analysis...');
+      const analysis = await GPTUltrasoundAnalyzer.analyzeUltrasound(file);
+      console.log('🧪 Image analysis successful:', analysis);
+      
+      // Test 2: Create a simple audio file
+      console.log('🧪 Step 2: Creating simple audio file...');
+      
+      // Create a simple AudioContext and generate basic audio
+      if (typeof window === 'undefined') {
+        throw new Error('Not in browser environment');
+      }
+
+      let audioContext: AudioContext;
+      try {
+        audioContext = new AudioContext();
+        console.log('🧪 AudioContext created successfully');
+      } catch (error) {
+        console.error('🧪 AudioContext creation failed:', error);
+        throw new Error('AudioContext not supported');
+      }
+
+      // Resume AudioContext if suspended
+      if (audioContext.state === 'suspended') {
+        console.log('🧪 Resuming AudioContext...');
+        await audioContext.resume();
+      }
+
+      console.log('🧪 AudioContext state:', audioContext.state);
+
+      // Create a simple 8-second audio buffer with a basic tone
+      const sampleRate = 44100;
+      const duration = 8;
+      const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+      const channelData = buffer.getChannelData(0);
+
+      // Generate a simple tone at the BPM frequency
+      const frequency = analysis.bpm / 60; // Convert BPM to Hz
+      const amplitude = 0.3;
+      
+      for (let i = 0; i < channelData.length; i++) {
+        const time = i / sampleRate;
+        channelData[i] = Math.sin(2 * Math.PI * frequency * time) * amplitude;
+      }
+
+      console.log('🧪 Simple audio buffer created');
+
+      // Convert to WAV and create blob
+      const wavBuffer = createSimpleWAVFile(buffer);
+      const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      console.log('🧪 Audio blob created, size:', audioBlob.size, 'bytes');
+
+      // Create result
+      const simpleResult: AudioGenerationResponse = {
+        audioUrl: audioUrl,
+        bpm: analysis.bpm,
+        isWatermarked: false,
+        confidence: analysis.confidence,
+        method: 'gpt-vision',
+        source: 'Simple audio generation test',
+        analysis: analysis.analysis
+      };
+      
+      console.log('🧪 Simple audio result created:', simpleResult);
+      setResult(simpleResult);
+      setProcessingState({
+        isProcessing: false,
+        step: 'complete',
+        progress: 100
+      });
+      
+      console.log('🧪 Simple audio generation test completed successfully!');
+      
+    } catch (error) {
+      console.error('🧪 Simple audio generation test failed:', error);
+      console.error('🧪 Error type:', typeof error);
+      console.error('🧪 Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('🧪 Error stack:', (error as Error)?.stack);
+      
+      setError(`Simple audio generation test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setProcessingState({
+        isProcessing: false,
+        step: 'error',
+        progress: 0,
+        error: `Simple audio generation test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  };
+
+  // Helper function to create a simple WAV file
+  const createSimpleWAVFile = (audioBuffer: AudioBuffer): ArrayBuffer => {
+    const length = audioBuffer.length;
+    const sampleRate = audioBuffer.sampleRate;
+    const channels = audioBuffer.numberOfChannels;
+    const bitsPerSample = 16;
+    const bytesPerSample = bitsPerSample / 8;
+    const blockAlign = channels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = length * blockAlign;
+    const bufferSize = 44 + dataSize;
+
+    const buffer = new ArrayBuffer(bufferSize);
+    const view = new DataView(buffer);
+
+    // WAV file header
+    let offset = 0;
+    view.setUint32(offset, 0x52494646, false); // "RIFF"
+    offset += 4;
+    view.setUint32(offset, 36 + dataSize, true); // File size
+    offset += 4;
+    view.setUint32(offset, 0x57415645, false); // "WAVE"
+    offset += 4;
+    view.setUint32(offset, 0x666d7420, false); // "fmt "
+    offset += 4;
+    view.setUint32(offset, 16, true); // Chunk size
+    offset += 4;
+    view.setUint16(offset, 1, true); // Audio format (PCM)
+    offset += 2;
+    view.setUint16(offset, channels, true); // Number of channels
+    offset += 2;
+    view.setUint32(offset, sampleRate, true); // Sample rate
+    offset += 4;
+    view.setUint32(offset, byteRate, true); // Byte rate
+    offset += 4;
+    view.setUint16(offset, blockAlign, true); // Block align
+    offset += 2;
+    view.setUint16(offset, bitsPerSample, true); // Bits per sample
+    offset += 2;
+    view.setUint32(offset, 0x64617461, false); // "data"
+    offset += 4;
+    view.setUint32(offset, dataSize, true); // Data size
+    offset += 4;
+
+    // Audio data
+    for (let i = 0; i < length; i++) {
+      for (let channel = 0; channel < channels; channel++) {
+        const channelData = audioBuffer.getChannelData(channel);
+        const sample = Math.max(-1, Math.min(1, channelData[i]));
+        view.setInt16(offset, sample * 0x7FFF, true);
+        offset += 2;
+      }
+    }
+
+    return buffer;
   };
 
   const handleReferenceAudioSelect = async (file: File) => {
@@ -423,31 +578,40 @@ export default function Home() {
               <div className="text-center">
                 <div className="inline-flex items-center bg-gray-100 rounded-lg p-1">
                   <button
-                    onClick={() => setIsTestMode(true)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      isTestMode 
+                    onClick={() => { setIsTestMode(true); setTestModeType('analysis'); }}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isTestMode && testModeType === 'analysis'
                         ? 'bg-white text-gray-900 shadow-sm' 
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
-                    🧪 Test Mode
+                    🧪 Analysis Only
                   </button>
                   <button
-                    onClick={() => setIsTestMode(false)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      !isTestMode 
+                    onClick={() => { setIsTestMode(true); setTestModeType('simple-audio'); }}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isTestMode && testModeType === 'simple-audio'
                         ? 'bg-white text-gray-900 shadow-sm' 
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
-                    🎵 Full Mode
+                    🎵 Simple Audio
+                  </button>
+                  <button
+                    onClick={() => { setIsTestMode(false); setTestModeType('full'); }}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      !isTestMode
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    🚀 Full Mode
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  {isTestMode 
-                    ? 'Test mode: Only analyzes image, no audio generation' 
-                    : 'Full mode: Complete image analysis and audio generation'
-                  }
+                  {testModeType === 'analysis' && 'Analysis only: No audio generation'}
+                  {testModeType === 'simple-audio' && 'Simple audio: Basic tone generation'}
+                  {testModeType === 'full' && 'Full mode: Complete noise burst audio generation'}
                 </p>
               </div>
 
@@ -465,7 +629,11 @@ export default function Home() {
               )}
               
               <ImageUpload 
-                onImageSelect={isTestMode ? testImageAnalysisOnly : handleImageSelect} 
+                onImageSelect={
+                  testModeType === 'analysis' ? testImageAnalysisOnly :
+                  testModeType === 'simple-audio' ? testSimpleAudioGeneration :
+                  handleImageSelect
+                } 
                 onError={handleError} 
                 className="max-w-2xl mx-auto" 
               />
