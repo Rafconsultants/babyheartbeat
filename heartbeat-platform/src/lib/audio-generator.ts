@@ -6,6 +6,7 @@ import { UltrasoundAnalysis } from './gpt-ultrasound-analyzer';
 import { DopplerSynthesizer, DopplerSynthesisOptions } from './doppler-synthesizer';
 import { AuthenticDopplerSynthesizer, AuthenticDopplerOptions } from './authentic-doppler-synthesizer';
 import { RealisticDopplerSynthesizer, RealisticDopplerOptions } from './realistic-doppler-synthesizer';
+import { NoiseBurstDopplerSynthesizer, NoiseBurstDopplerOptions } from './noise-burst-doppler-synthesizer';
 import { WaveformExtractor } from './waveform-extractor';
 
 export interface AudioGenerationOptions {
@@ -31,17 +32,17 @@ export class AudioGenerator {
   private static audioContext: AudioContext | null = null;
 
   /**
-   * Generate realistic Doppler ultrasound heartbeat audio using the new synthesizer
+   * Generate realistic Doppler ultrasound heartbeat audio using noise burst synthesizer
    */
   static async generateHeartbeatAudio(options: AudioGenerationOptions): Promise<AudioGenerationResult> {
-    console.log('🎵 Starting realistic Doppler audio generation with options:', options);
+    console.log('🎵 Starting noise burst Doppler audio generation with options:', options);
 
     try {
       // Prepare waveform data from GPT analysis or generate fallback
       const waveformData = await this.prepareWaveformData(options);
       
-      // Use the new realistic Doppler synthesizer for authentic sound quality
-      const realisticOptions: RealisticDopplerOptions = {
+      // Use the new noise burst Doppler synthesizer for authentic sound quality
+      const noiseBurstOptions: NoiseBurstDopplerOptions = {
         waveformData,
         bpm: options.bpm,
         duration: 8.000, // Force to 8 seconds as per spec
@@ -50,10 +51,10 @@ export class AudioGenerator {
         stereo: options.stereo || false
       };
 
-      // Generate realistic Doppler audio using the new synthesizer
-      const result = await RealisticDopplerSynthesizer.generateRealisticDopplerAudio(realisticOptions);
+      // Generate noise burst Doppler audio using the new synthesizer
+      const result = await NoiseBurstDopplerSynthesizer.generateNoiseBurstDopplerAudio(noiseBurstOptions);
       
-      console.log('🎵 Realistic Doppler audio generation completed:', result);
+      console.log('🎵 Noise burst Doppler audio generation completed:', result);
       return {
         audioUrl: result.audioUrl,
         duration: result.duration,
@@ -63,8 +64,8 @@ export class AudioGenerator {
         referenceMatched: false // Not using reference audio in this path
       };
     } catch (error) {
-      console.error('❌ Realistic Doppler audio generation failed:', error);
-      throw new Error('Failed to generate realistic Doppler heartbeat audio');
+      console.error('❌ Noise burst Doppler audio generation failed:', error);
+      throw new Error('Failed to generate noise burst Doppler heartbeat audio');
     }
   }
 
@@ -106,12 +107,12 @@ export class AudioGenerator {
     options: AudioGenerationOptions, 
     referenceAudio: AudioBuffer
   ): Promise<AudioGenerationResult> {
-    console.log('🎵 Starting reference-matched Doppler audio generation');
+    console.log('🎵 Starting reference-matched noise burst Doppler audio generation');
     
-    // Use the realistic synthesizer for reference matching as well
+    // Use the noise burst synthesizer for reference matching as well
     const waveformData = await this.prepareWaveformData(options);
     
-    const realisticOptions: RealisticDopplerOptions = {
+    const noiseBurstOptions: NoiseBurstDopplerOptions = {
       waveformData,
       bpm: options.bpm,
       duration: 8.000,
@@ -120,7 +121,7 @@ export class AudioGenerator {
       stereo: options.stereo || false
     };
 
-    const result = await RealisticDopplerSynthesizer.generateRealisticDopplerAudio(realisticOptions);
+    const result = await NoiseBurstDopplerSynthesizer.generateNoiseBurstDopplerAudio(noiseBurstOptions);
     
     return {
       audioUrl: result.audioUrl,
