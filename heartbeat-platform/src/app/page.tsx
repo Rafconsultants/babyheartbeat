@@ -9,6 +9,7 @@ import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer' // Updated
 import { AudioGenerator } from '@/lib/audio-generator' // Updated import
 import { ReferenceAudioLoader, ReferenceAudioInfo } from '@/lib/reference-audio-loader' // Reference audio support
 import { testOpenAIAPI } from '@/lib/api-test' // Add API test import
+import { DopplerHeartbeatSynthesizer } from '@/lib/doppler-heartbeat-synthesizer' // New specialized synthesizer
 
 export default function Home() {
   const [processingState, setProcessingState] = useState<ProcessingState>({
@@ -145,7 +146,7 @@ export default function Home() {
 
   // Simple audio generation test that creates a basic audio file
   const testSimpleAudioGeneration = async (file: File) => {
-    console.log('🧪 Testing simple audio generation...');
+    console.log('🧪 Testing authentic Doppler heartbeat generation...');
     console.log('🧪 File:', file.name, 'Size:', file.size, 'Type:', file.type);
     
     try {
@@ -172,83 +173,38 @@ export default function Home() {
       
       console.log('🧪 Using BPM:', bpm);
       
-      // Test 2: Create a simple audio file
-      console.log('🧪 Step 2: Creating simple audio file...');
+      // Test 2: Generate authentic Doppler heartbeat audio
+      console.log('🧪 Step 2: Generating authentic Doppler heartbeat...');
       
-      // Create a simple AudioContext and generate basic audio
-      if (typeof window === 'undefined') {
-        throw new Error('Not in browser environment');
-      }
-
-      let audioContext: AudioContext;
-      try {
-        audioContext = new AudioContext();
-        console.log('🧪 AudioContext created successfully');
-      } catch (error) {
-        console.error('🧪 AudioContext creation failed:', error);
-        throw new Error('AudioContext not supported');
-      }
-
-      // Resume AudioContext if suspended
-      if (audioContext.state === 'suspended') {
-        console.log('🧪 Resuming AudioContext...');
-        await audioContext.resume();
-      }
-
-      console.log('🧪 AudioContext state:', audioContext.state);
-
-      // Create a simple 8-second audio buffer with heartbeat pattern
-      const sampleRate = 44100;
-      const duration = 8;
-      const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
-      const channelData = buffer.getChannelData(0);
-
-      // Generate heartbeat pattern
-      const beatInterval = 60 / bpm; // Time between beats in seconds
-      const beatDuration = 0.1; // Duration of each beat in seconds
-      const beatAmplitude = 0.3;
+      const dopplerOptions = {
+        bpm: bpm,
+        duration: 8.0,
+        sampleRate: 44100,
+        hasDoublePulse: true, // Enable double-pulse for realism
+        doublePulseOffset: 55, // 55ms between primary and secondary pulse
+        timingVariability: 15, // ±15ms timing variation
+        amplitudeVariation: 0.1 // 10% amplitude variation
+      };
       
-      // Fill the buffer with silence first
-      for (let i = 0; i < channelData.length; i++) {
-        channelData[i] = 0;
-      }
+      console.log('🧪 Doppler options:', dopplerOptions);
       
-      // Add heartbeat sounds
-      for (let beatTime = 0.2; beatTime < duration; beatTime += beatInterval) {
-        const startSample = Math.floor(beatTime * sampleRate);
-        const endSample = Math.min(startSample + Math.floor(beatDuration * sampleRate), channelData.length);
-        
-        // Create a simple "thump" sound for each beat
-        for (let i = startSample; i < endSample; i++) {
-          const timeInBeat = (i - startSample) / sampleRate;
-          const envelope = Math.exp(-timeInBeat * 10); // Quick decay
-          const frequency = 150 + Math.random() * 50; // Random frequency around 150-200 Hz
-          const sample = Math.sin(2 * Math.PI * frequency * timeInBeat) * beatAmplitude * envelope;
-          channelData[i] += sample;
-        }
-      }
-
-      console.log('🧪 Simple audio buffer created');
-
-      // Convert to WAV and create blob
-      const wavBuffer = createSimpleWAVFile(buffer);
-      const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' });
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      console.log('🧪 Audio blob created, size:', audioBlob.size, 'bytes');
+      const dopplerResult = await DopplerHeartbeatSynthesizer.generateDopplerHeartbeat(dopplerOptions);
+      
+      console.log('🧪 Doppler heartbeat generation successful:', dopplerResult);
+      console.log('🧪 Audio blob size:', dopplerResult.fileSize, 'bytes');
 
       // Create result
       const simpleResult: AudioGenerationResponse = {
-        audioUrl: audioUrl,
-        bpm: bpm,
+        audioUrl: dopplerResult.audioUrl,
+        bpm: dopplerResult.bpm,
         isWatermarked: false,
         confidence: confidence,
         method: 'gpt-vision',
-        source: 'Simple audio generation test',
+        source: 'Authentic Doppler heartbeat synthesis with noise bursts',
         analysis: analysis
       };
       
-      console.log('🧪 Simple audio result created:', simpleResult);
+      console.log('🧪 Authentic Doppler result created:', simpleResult);
       setResult(simpleResult);
       setProcessingState({
         isProcessing: false,
@@ -256,20 +212,20 @@ export default function Home() {
         progress: 100
       });
       
-      console.log('🧪 Simple audio generation test completed successfully!');
+      console.log('🧪 Authentic Doppler heartbeat generation completed successfully!');
       
     } catch (error) {
-      console.error('🧪 Simple audio generation test failed:', error);
+      console.error('🧪 Authentic Doppler heartbeat generation failed:', error);
       console.error('🧪 Error type:', typeof error);
       console.error('🧪 Error message:', error instanceof Error ? error.message : 'Unknown error');
       console.error('🧪 Error stack:', (error as Error)?.stack);
       
-      setError(`Simple audio generation test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setError(`Authentic Doppler heartbeat generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setProcessingState({
         isProcessing: false,
         step: 'error',
         progress: 0,
-        error: `Simple audio generation test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        error: `Authentic Doppler heartbeat generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
   };
@@ -593,7 +549,7 @@ export default function Home() {
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
-                    🎵 Simple Audio
+                    🎵 Authentic Doppler
                   </button>
                   <button
                     onClick={() => { setIsTestMode(false); setTestModeType('full'); }}
@@ -608,7 +564,7 @@ export default function Home() {
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
                   {testModeType === 'analysis' && 'Analysis only: No audio generation'}
-                  {testModeType === 'simple-audio' && 'Simple audio: Basic tone generation'}
+                  {testModeType === 'simple-audio' && 'Authentic Doppler: Noise-burst based fetal heartbeat synthesis'}
                   {testModeType === 'full' && 'Full mode: Complete noise burst audio generation'}
                 </p>
                 
@@ -616,7 +572,7 @@ export default function Home() {
                 {testModeType === 'analysis' && (
                   <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <p className="text-sm text-yellow-800">
-                      <strong>💡 Need audio?</strong> Switch to "🎵 Simple Audio" mode below and use manual BPM input for guaranteed audio generation!
+                      <strong>💡 Need authentic Doppler audio?</strong> Switch to "🎵 Authentic Doppler" mode below and use manual BPM input for guaranteed authentic fetal heartbeat sounds!
                     </p>
                   </div>
                 )}
