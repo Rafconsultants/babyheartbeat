@@ -14,28 +14,51 @@ export default function ImageUpload({ onImageSelect, onError, className = '' }: 
   const [isDragOver, setIsDragOver] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const handleFileSelect = useCallback((file: File) => {
-    const validation = validateImageFile(file)
-    if (!validation.isValid) {
-      onError?.(validation.error || 'Invalid file')
-      return
-    }
+    console.log('🎵 ImageUpload: File selected:', file.name, file.size, file.type);
+    
+    try {
+      const validation = validateImageFile(file)
+      console.log('🎵 ImageUpload: Validation result:', validation);
+      
+      if (!validation.isValid) {
+        const errorMsg = validation.error || 'Invalid file';
+        console.error('❌ ImageUpload: Validation failed:', errorMsg);
+        setUploadError(errorMsg);
+        onError?.(errorMsg);
+        return;
+      }
 
-    setSelectedFile(file)
-    
-    // Create preview URL
-    const url = URL.createObjectURL(file)
-    setPreviewUrl(url)
-    
-    // Call the parent handler
-    onImageSelect(file)
+      // Clear any previous errors
+      setUploadError(null);
+      
+      setSelectedFile(file)
+      
+      // Create preview URL
+      const url = URL.createObjectURL(file)
+      setPreviewUrl(url)
+      
+      console.log('🎵 ImageUpload: File processed successfully, calling onImageSelect');
+      
+      // Call the parent handler
+      onImageSelect(file)
+    } catch (error) {
+      console.error('❌ ImageUpload: Error processing file:', error);
+      const errorMsg = 'Failed to process image file';
+      setUploadError(errorMsg);
+      onError?.(errorMsg);
+    }
   }, [onImageSelect, onError])
 
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('🎵 ImageUpload: File input change event:', event.target.files);
     const file = event.target.files?.[0]
     if (file) {
       handleFileSelect(file)
+    } else {
+      console.log('🎵 ImageUpload: No file selected in input');
     }
   }
 
@@ -53,22 +76,34 @@ export default function ImageUpload({ onImageSelect, onError, className = '' }: 
     e.preventDefault()
     setIsDragOver(false)
     
+    console.log('🎵 ImageUpload: Drop event:', e.dataTransfer.files);
     const files = Array.from(e.dataTransfer.files)
     const imageFile = files.find(file => file.type.startsWith('image/'))
     
     if (imageFile) {
       handleFileSelect(imageFile)
     } else {
-      onError?.('Please select a valid image file')
+      const errorMsg = 'Please select a valid image file';
+      console.error('❌ ImageUpload: No valid image file in drop');
+      setUploadError(errorMsg);
+      onError?.(errorMsg);
     }
   }, [handleFileSelect, onError])
 
   const handleButtonClick = () => {
-    document.getElementById('file-input')?.click()
+    console.log('🎵 ImageUpload: Button clicked, triggering file input');
+    const fileInput = document.getElementById('file-input') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
+    } else {
+      console.error('❌ ImageUpload: File input element not found');
+    }
   }
 
   const removeFile = () => {
+    console.log('🎵 ImageUpload: Removing file');
     setSelectedFile(null)
+    setUploadError(null)
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl)
       setPreviewUrl(null)
@@ -187,6 +222,18 @@ export default function ImageUpload({ onImageSelect, onError, className = '' }: 
             onChange={handleFileInputChange}
             className="hidden"
           />
+        </div>
+      )}
+
+      {/* Error Display */}
+      {uploadError && (
+        <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="ml-2 text-sm text-red-800">{uploadError}</span>
+          </div>
         </div>
       )}
     </div>

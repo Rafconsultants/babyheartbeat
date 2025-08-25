@@ -109,8 +109,16 @@ export default function Home() {
         audioUrl = audioResult.audioUrl;
         referenceMatched = audioResult.referenceMatched;
       } else {
-        // Use standard synthesis
-        audioUrl = await AudioGenerator.generateFetalDopplerHeartbeat(gptAnalysis.bpm, 8, gptAnalysis);
+        // Use standard synthesis with noise burst synthesizer
+        const audioResult = await AudioGenerator.generateHeartbeatAudio({
+          bpm: gptAnalysis.bpm,
+          duration: 8,
+          sampleRate: 44100,
+          isWatermarked: true,
+          gptAnalysis: gptAnalysis,
+          stereo: true
+        });
+        audioUrl = audioResult.audioUrl;
       }
       
       console.log('🚀 Audio generation completed, URL:', audioUrl);
