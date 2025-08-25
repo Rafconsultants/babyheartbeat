@@ -156,17 +156,28 @@ export class GPTUltrasoundAnalyzer {
 
     const prompt = `Analyze this fetal ultrasound image and return only the timing and amplitude data needed to recreate a realistic Doppler fetal heartbeat from the waveform.
 
-Instructions:
-- If a numeric BPM/FHR is visible on-screen, return it exactly.
-- Attempt to read beat onsets from the waveform/time axis (use tick marks if present) to produce beat onset times (seconds).
-- If you cannot read onsets but have BPM, compute uniform onsets over an 8.0 s window starting near 0.12 s.
-- If neither BPM nor readable waveform timing is available, set bpm = 140 and compute uniform onsets accordingly.
-- If the waveform shows two close peaks per beat (double-burst), estimate the offset between peaks in milliseconds.
-- If relative beat amplitudes are visually discernible, output gentle normalized scalars (0.7–0.9); otherwise use 0.8 for all.
+CRITICAL INSTRUCTIONS:
+1. **PRIORITY: Look for FHR (Fetal Heart Rate) numbers displayed on the image** - these are often the most accurate source (e.g., "FHR 155bpm")
+2. **Examine Doppler waveforms** - look for regular peaks/spikes that represent heartbeats
+3. **Count visible peaks** in the waveform over a time period to calculate BPM
+4. **Look for time scales** on the waveform (usually in seconds)
+5. **Identify measurement markers** or grid lines that indicate timing
+
+WAVEFORM ANALYSIS:
+- Look for regular, repeating peaks in Doppler traces
+- Count peaks over visible time period (e.g., if you see 7 peaks in 3 seconds = ~140 BPM)
+- Measure time between consecutive peaks
+- Look for double-pulse patterns (two close peaks per heartbeat)
+
+SPECIFIC DETECTION:
+- If you see "FHR 155bpm" or similar, use that exact value
+- If you see a Doppler waveform with regular peaks, count them over the visible time period
+- Look for time markers on the waveform (e.g., -3.0 to 0 seconds)
+- Calculate BPM from peak count and time period
 
 Return JSON only with this schema:
 {
-  "bpm": number,                        // exact if shown; else estimated or 140
+  "bpm": number,                        // exact FHR if shown, otherwise calculated from waveform
   "confidence": number,                 // 0..1 for bpm confidence
   "beat_times_sec": number[],           // ascending onsets within [0, 8), e.g. [0.12, 0.50, 0.89, ...]
   "double_pulse_offset_ms": number|null,// e.g. 55 if two sub-bursts per beat; null if single
@@ -174,11 +185,10 @@ Return JSON only with this schema:
 }
 
 Constraints:
-- beat_times_sec must fit in [0, 8).
-- If using uniform timing from BPM, align the first beat near 0.12–0.20 s and continue at exact period (60 / bpm).
-- amplitude_scalars should vary gently (±5–8%) unless the waveform clearly shows stronger variation.
-
-Return only valid JSON. No prose.`;
+- If FHR is clearly displayed (like "FHR 155bpm"), use that exact value
+- Calculate beat_times_sec based on the detected BPM over 8 seconds
+- amplitude_scalars should be gentle variations (0.7-0.9)
+- Return only valid JSON, no other text`;
 
     console.log('🔍 Making API request to GPT-4 Vision...');
 

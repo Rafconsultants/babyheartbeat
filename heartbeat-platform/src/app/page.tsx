@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { AudioGenerationResponse, ProcessingState } from '@/types'
 import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer'
-import { SoftMuffledDopplerSynthesizer } from '@/lib/soft-muffled-doppler'
+import { AuthenticFetalDopplerSynthesizer } from '@/lib/authentic-fetal-doppler'
 import ImageUpload from '@/components/ImageUpload'
 import UltrasoundSimulator from '@/components/UltrasoundSimulator'
 
@@ -43,8 +43,8 @@ export default function Home() {
         progress: 75
       });
 
-      // Step 2: Generate soft muffled fetal Doppler audio
-      console.log('🎵 Generating soft muffled fetal Doppler audio...');
+      // Step 2: Generate authentic fetal Doppler audio
+      console.log('🎵 Generating authentic fetal Doppler audio...');
       const dopplerOptions = {
         bpm: analysis.bpm,
         duration: 8.0,
@@ -54,7 +54,7 @@ export default function Home() {
         amplitudeScalars: analysis.amplitude_scalars || []
       };
 
-      const dopplerResult = await SoftMuffledDopplerSynthesizer.generateSoftMuffledDoppler(dopplerOptions);
+      const dopplerResult = await AuthenticFetalDopplerSynthesizer.generateAuthenticFetalDoppler(dopplerOptions);
       console.log('🎵 Audio generation successful:', dopplerResult);
 
       // Create result
@@ -63,7 +63,7 @@ export default function Home() {
         bpm: dopplerResult.bpm,
         isWatermarked: false,
         confidence: analysis.confidence,
-        method: 'soft-muffled-doppler',
+        method: 'authentic-fetal-doppler',
         source: 'Ultrasound image analysis',
         analysis: analysis.analysis
       };

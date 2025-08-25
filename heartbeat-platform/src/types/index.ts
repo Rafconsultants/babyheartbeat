@@ -25,13 +25,13 @@ export interface AudioGenerationRequest {
 }
 
 export interface AudioGenerationResponse {
-  audioUrl: string;
-  bpm: number;
-  isWatermarked: boolean;
-  confidence?: number;
-  method?: 'gpt-vision' | 'ocr' | 'waveform' | 'manual' | 'reference-matched' | 'simple-doppler' | 'enhanced-doppler' | 'realistic-fetal-doppler' | 'whoomp-lub-doppler' | 'noise-burst-doppler' | 'thump-tap-doppler' | 'soft-muffled-doppler';
-  source?: string;
-  analysis?: string; // Enhanced GPT analysis details
+    audioUrl: string;
+    bpm: number;
+    isWatermarked: boolean;
+    confidence?: number;
+    method?: 'gpt-vision' | 'ocr' | 'waveform' | 'manual' | 'reference-matched' | 'simple-doppler' | 'enhanced-doppler' | 'realistic-fetal-doppler' | 'whoomp-lub-doppler' | 'noise-burst-doppler' | 'thump-tap-doppler' | 'soft-muffled-doppler' | 'authentic-fetal-doppler';
+    source?: string;
+    analysis?: string; // Enhanced GPT analysis details
 }
 
 // Payment types
