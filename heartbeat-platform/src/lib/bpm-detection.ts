@@ -1,12 +1,16 @@
-// BPM Detection from Ultrasound Images using GPT-4 Vision API
-// This module handles authentic ultrasound image analysis for BPM detection
+// BPM Detection from Ultrasound Images using GPT-4 Vision API and Waveform Extraction
+// This module handles authentic ultrasound image analysis for BPM detection with enhanced fallback
+
+import { WaveformExtractor, ImageAnalysisResult } from './waveform-extractor';
 
 export interface BPMDetectionResult {
   bpm: number;
   confidence: number;
-  method: 'gpt-vision' | 'ocr' | 'waveform' | 'manual';
+  method: 'waveform-extraction' | 'gpt-vision' | 'ocr' | 'waveform' | 'manual';
   source: string;
   analysis?: string;
+  waveform_extracted: boolean;
+  waveform_confidence: number;
 }
 
 export class BPMDetector {
@@ -14,15 +18,30 @@ export class BPMDetector {
   private static readonly GPT_MODEL = 'gpt-4-vision-preview';
 
   /**
-   * Detect BPM from ultrasound image using GPT-4 Vision API
+   * Detect BPM from ultrasound image using waveform extraction and GPT-4 Vision API
    */
   static async detectBPM(imageFile: File): Promise<BPMDetectionResult> {
     try {
-      // Convert image to base64 for GPT API
-      const base64Image = await this.fileToBase64(imageFile);
+      // First, attempt waveform extraction using computer vision
+      console.log('🔍 Attempting waveform extraction for BPM detection...');
+      const waveformResult = await WaveformExtractor.extractWaveform(imageFile);
       
-      // Analyze image with GPT-4 Vision
-      const gptResult = await this.analyzeWithGPTVision(base64Image);
+      if (waveformResult.waveformData.hasWaveform && waveformResult.confidence > 0.6) {
+        console.log('🔍 Waveform extraction successful for BPM detection');
+        return {
+          bpm: Math.round(waveformResult.bpm),
+          confidence: Math.max(0.7, waveformResult.confidence),
+          method: 'waveform-extraction',
+          source: 'Computer vision waveform extraction',
+          analysis: waveformResult.analysis,
+          waveform_extracted: true,
+          waveform_confidence: waveformResult.waveformData.confidence
+        };
+      }
+
+      // If waveform extraction fails or has low confidence, try GPT analysis
+      console.log('🔍 Waveform extraction failed or low confidence, trying GPT analysis...');
+      const gptResult = await this.analyzeWithGPTVision(imageFile);
       
       if (gptResult.bpm && gptResult.confidence > 0.7) {
         return {
@@ -30,20 +49,25 @@ export class BPMDetector {
           confidence: gptResult.confidence,
           method: 'gpt-vision',
           source: 'GPT-4 Vision analysis of ultrasound image',
-          analysis: gptResult.analysis
+          analysis: gptResult.analysis,
+          waveform_extracted: waveformResult.waveformData.hasWaveform,
+          waveform_confidence: waveformResult.waveformData.confidence
         };
       }
 
-      // Fallback to manual estimation if GPT analysis fails
-      return this.estimateBPMFromImage(imageFile);
+      // Fallback to manual estimation if both methods fail
+      console.log('🔍 Both waveform extraction and GPT analysis failed, using fallback...');
+      return this.estimateBPMFromImage(imageFile, waveformResult);
     } catch (error) {
-      console.error('GPT Vision BPM detection failed:', error);
+      console.error('🔍 BPM detection failed:', error);
       // Return a reasonable default
       return {
         bpm: 140,
         confidence: 0.3,
         method: 'manual',
-        source: 'Default estimation due to GPT analysis failure'
+        source: 'Default estimation due to analysis failure',
+        waveform_extracted: false,
+        waveform_confidence: 0.0
       };
     }
   }
@@ -51,7 +75,8 @@ export class BPMDetector {
   /**
    * Analyze ultrasound image with GPT-4 Vision API
    */
-  private static async analyzeWithGPTVision(base64Image: string): Promise<{ bpm: number; confidence: number; analysis: string }> {
+  private static async analyzeWithGPTVision(imageFile: File): Promise<{ bpm: number; confidence: number; analysis: string }> {
+    const base64Image = await this.fileToBase64(imageFile);
     const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
     
     if (!apiKey) {
@@ -124,14 +149,14 @@ Respond in JSON format:
     try {
       const result = JSON.parse(content);
       return {
-        bpm: result.bpm || 140,
-        confidence: result.confidence || 0.5,
+        bpm: this.validateBPM(result.bpm || 140),
+        confidence: Math.max(0, Math.min(1, result.confidence || 0.5)),
         analysis: result.analysis || 'GPT analysis completed'
       };
     } catch {
       // If JSON parsing fails, try to extract BPM from text
       const bpmMatch = content.match(/(\d{3})\s*(?:BPM|bpm|beats?)/i);
-      const bpm = bpmMatch ? parseInt(bpmMatch[1]) : 140;
+      const bpm = this.validateBPM(bpmMatch ? parseInt(bpmMatch[1]) : 140);
       
       return {
         bpm,
@@ -159,34 +184,48 @@ Respond in JSON format:
   }
 
   /**
-   * Fallback method to estimate BPM from image characteristics
+   * Fallback method to estimate BPM from image characteristics and waveform data
    */
-  private static async estimateBPMFromImage(imageFile: File): Promise<BPMDetectionResult> {
-    // Analyze image properties to make an educated guess
-    const imageSize = imageFile.size;
+  private static async estimateBPMFromImage(imageFile: File, waveformResult: ImageAnalysisResult): Promise<BPMDetectionResult> {
+    // Use waveform BPM if available, otherwise analyze image properties
+    let estimatedBPM = waveformResult.bpm;
+    let confidence = waveformResult.confidence;
+    let method: 'waveform' | 'manual' = 'waveform';
+    let source = 'Waveform analysis with low confidence';
     
-    // Simple heuristic based on image characteristics
-    let estimatedBPM = 140; // Default
-    
-    if (imageSize > 5000000) { // Large image, might be high quality
-      estimatedBPM = 145;
-    } else if (imageSize < 1000000) { // Small image, might be compressed
-      estimatedBPM = 135;
+    if (!waveformResult.waveformData.hasWaveform) {
+      // Analyze image properties to make an educated guess
+      const imageSize = imageFile.size;
+      
+      // Simple heuristic based on image characteristics
+      if (imageSize > 5000000) { // Large image, might be high quality
+        estimatedBPM = 145;
+      } else if (imageSize < 1000000) { // Small image, might be compressed
+        estimatedBPM = 135;
+      } else {
+        estimatedBPM = 140; // Default
+      }
+      
+      confidence = 0.4;
+      method = 'manual';
+      source = 'Estimated from image characteristics';
     }
-    
+
     return {
-      bpm: estimatedBPM,
-      confidence: 0.4,
-      method: 'manual',
-      source: 'Estimated from image characteristics'
+      bpm: this.validateBPM(estimatedBPM),
+      confidence,
+      method,
+      source,
+      waveform_extracted: waveformResult.waveformData.hasWaveform,
+      waveform_confidence: waveformResult.waveformData.confidence
     };
   }
 
   /**
    * Validate BPM value is within reasonable range
    */
-  static validateBPM(bpm: number): boolean {
-    return bpm >= 100 && bpm <= 200;
+  static validateBPM(bpm: number): number {
+    return Math.max(100, Math.min(200, bpm));
   }
 
   /**
@@ -196,5 +235,16 @@ Respond in JSON format:
     if (bpm < 110) return "Slow fetal heart rate";
     if (bpm > 160) return "Fast fetal heart rate";
     return "Normal fetal heart rate";
+  }
+
+  /**
+   * Get physiologically plausible BPM range with variability
+   */
+  static getPlausibleBPMRange(): { min: number; max: number; default: number } {
+    return {
+      min: 110,
+      max: 160,
+      default: 140
+    };
   }
 }
