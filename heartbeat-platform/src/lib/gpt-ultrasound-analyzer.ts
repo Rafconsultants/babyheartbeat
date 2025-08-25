@@ -28,7 +28,15 @@ export class GPTUltrasoundAnalyzer {
     try {
       // First, attempt waveform extraction using computer vision
       console.log('🔍 Attempting waveform extraction...');
-      const waveformResult = await WaveformExtractor.extractWaveform(imageFile);
+      let waveformResult: ImageAnalysisResult;
+      
+      try {
+        waveformResult = await WaveformExtractor.extractWaveform(imageFile);
+        console.log('🔍 Waveform extraction result:', waveformResult);
+      } catch (waveformError) {
+        console.warn('🔍 Waveform extraction failed, continuing with GPT analysis:', waveformError);
+        waveformResult = this.getFallbackWaveformResult();
+      }
       
       if (waveformResult.waveformData.hasWaveform && waveformResult.confidence > 0.5) {
         console.log('🔍 Waveform extraction successful, using extracted data');
@@ -37,7 +45,15 @@ export class GPTUltrasoundAnalyzer {
 
       // If waveform extraction fails or has low confidence, try GPT analysis
       console.log('🔍 Waveform extraction failed or low confidence, trying GPT analysis...');
-      const gptResult = await this.analyzeWithGPT(imageFile);
+      let gptResult: Partial<UltrasoundAnalysis>;
+      
+      try {
+        gptResult = await this.analyzeWithGPT(imageFile);
+        console.log('🔍 GPT analysis result:', gptResult);
+      } catch (gptError) {
+        console.warn('🔍 GPT analysis failed, using fallback:', gptError);
+        gptResult = this.getFallbackGPTResult();
+      }
       
       // Combine GPT results with waveform data if available
       return this.combineResults(gptResult, waveformResult);
@@ -47,6 +63,39 @@ export class GPTUltrasoundAnalyzer {
       // Return fallback analysis
       return this.getFallbackAnalysis();
     }
+  }
+
+  /**
+   * Get fallback waveform result when extraction fails
+   */
+  private static getFallbackWaveformResult(): ImageAnalysisResult {
+    return {
+      waveformData: {
+        beatTimes: [],
+        amplitudes: [],
+        doublePulseOffsets: [],
+        confidence: 0.0,
+        hasWaveform: false,
+        extractedPoints: []
+      },
+      bpm: 140,
+      confidence: 0.0,
+      analysis: 'Waveform extraction failed - using fallback'
+    };
+  }
+
+  /**
+   * Get fallback GPT result when API fails
+   */
+  private static getFallbackGPTResult(): Partial<UltrasoundAnalysis> {
+    return {
+      bpm: 140,
+      confidence: 0.3,
+      beat_times_sec: [],
+      double_pulse_offset_ms: null,
+      amplitude_scalars: [],
+      analysis: 'GPT analysis failed - using fallback'
+    };
   }
 
   /**
