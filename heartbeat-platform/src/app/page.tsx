@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { AudioGenerationResponse, ProcessingState } from '@/types'
 import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer'
-import { RealisticFetalDopplerSynthesizer } from '@/lib/realistic-fetal-doppler'
+import { WhoompLubDopplerSynthesizer } from '@/lib/whoomp-lub-doppler'
 import ImageUpload from '@/components/ImageUpload'
 
 export default function Home() {
@@ -40,18 +40,17 @@ export default function Home() {
         progress: 75
       });
 
-      // Step 2: Generate realistic fetal Doppler audio
-      console.log('🎵 Generating realistic fetal Doppler audio...');
+      // Step 2: Generate whoomp-lub fetal Doppler audio
+      console.log('🎵 Generating whoomp-lub fetal Doppler audio...');
       const dopplerOptions = {
         bpm: analysis.bpm,
         duration: 8.0,
         sampleRate: 44100,
-        hasDoublePulse: true,
-        timingVariability: 15,
-        amplitudeVariation: 0.12
+        timingVariability: 12,
+        amplitudeVariation: 0.10
       };
 
-      const dopplerResult = await RealisticFetalDopplerSynthesizer.generateRealisticFetalDoppler(dopplerOptions);
+      const dopplerResult = await WhoompLubDopplerSynthesizer.generateWhoompLubDoppler(dopplerOptions);
       console.log('🎵 Audio generation successful:', dopplerResult);
 
       // Create result
@@ -60,7 +59,7 @@ export default function Home() {
         bpm: dopplerResult.bpm,
         isWatermarked: false,
         confidence: analysis.confidence,
-        method: 'realistic-fetal-doppler',
+        method: 'whoomp-lub-doppler',
         source: 'Ultrasound image analysis',
         analysis: analysis.analysis
       };
