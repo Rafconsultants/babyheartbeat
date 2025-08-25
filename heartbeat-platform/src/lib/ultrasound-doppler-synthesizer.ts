@@ -122,15 +122,12 @@ export class UltrasoundDopplerSynthesizer {
   private static generateWhooshLubDub(channelData: Float32Array, sampleRate: number, startTime: number, amplitude: number, doublePulseOffsetMs: number): void {
     const startSample = Math.floor(startTime * sampleRate);
     
-    // WHOOSH component (ultrasound waves bouncing off tissue)
-    this.generateWhoosh(channelData, sampleRate, startTime, amplitude * 0.6);
+    // LUB component (strong, pronounced pulse)
+    this.generateLub(channelData, sampleRate, startTime, amplitude * 1.2);
     
-    // LUB component (strong echo - bright areas)
-    this.generateLub(channelData, sampleRate, startTime + 0.02, amplitude * 0.8);
-    
-    // DUB component (weaker echo - gray areas)
+    // DUB component (strong, pronounced pulse)
     const dubTime = startTime + (doublePulseOffsetMs / 1000);
-    this.generateDub(channelData, sampleRate, dubTime, amplitude * 0.5);
+    this.generateDub(channelData, sampleRate, dubTime, amplitude * 1.0);
   }
 
   /**
@@ -191,22 +188,74 @@ export class UltrasoundDopplerSynthesizer {
   }
 
   /**
-   * Generate LUB - strong echo (bright areas)
+   * Generate LUB - strong, pronounced pulse
    */
   private static generateLub(channelData: Float32Array, sampleRate: number, startTime: number, amplitude: number): void {
+    const startSample = Math.floor(startTime * sampleRate);
+    const duration = 0.15; // 150ms duration
+    const numSamples = Math.floor(duration * sampleRate);
+    
+    // LUB characteristics - strong, pronounced pulse
+    const attackTime = 0.008; // 8ms attack (quick rise)
+    const decayTime = 0.142; // 142ms decay (gentle decay)
+    const attackSamples = Math.floor(attackTime * sampleRate);
+    const decaySamples = Math.floor(decayTime * sampleRate);
+    
+    // Frequency components for LUB (strong, pronounced)
+    const fundamentalFreq = 85; // Deep fundamental for strong pulse
+    const harmonicFreqs = [170, 255, 340, 425]; // Rich harmonics for fullness
+    
+    for (let i = 0; i < numSamples; i++) {
+      const sampleIndex = startSample + i;
+      if (sampleIndex >= channelData.length) break;
+      
+      const time = i / sampleRate;
+      
+      // Envelope - quick rise, gentle decay
+      let envelope = 0;
+      if (i < attackSamples) {
+        envelope = i / attackSamples; // Quick linear attack
+      } else {
+        envelope = Math.exp(-(i - attackSamples) / (decaySamples * 0.6)); // Gentle exponential decay
+      }
+      
+      // LUB sound synthesis - strong, pronounced pulse
+      let lub = 0;
+      
+      // Fundamental frequency
+      lub += Math.sin(2 * Math.PI * fundamentalFreq * time) * 0.6;
+      
+      // Rich harmonics for fullness
+      harmonicFreqs.forEach((freq, index) => {
+        const harmonicAmp = 0.35 / (index + 1.2); // Strong harmonics for pronounced sound
+        lub += Math.sin(2 * Math.PI * freq * time) * harmonicAmp;
+      });
+      
+      // Add warmth for inside-the-body character
+      lub += Math.sin(2 * Math.PI * fundamentalFreq * 0.5 * time) * 0.15;
+      
+      // Apply envelope and amplitude
+      channelData[sampleIndex] += lub * envelope * amplitude * 1.1;
+    }
+  }
+
+  /**
+   * Generate DUB - strong, pronounced pulse
+   */
+  private static generateDub(channelData: Float32Array, sampleRate: number, startTime: number, amplitude: number): void {
     const startSample = Math.floor(startTime * sampleRate);
     const duration = 0.12; // 120ms duration
     const numSamples = Math.floor(duration * sampleRate);
     
-    // LUB characteristics - strong echo, bright areas
-    const attackTime = 0.015; // 15ms attack
-    const decayTime = 0.105; // 105ms decay
+    // DUB characteristics - strong, pronounced pulse
+    const attackTime = 0.006; // 6ms attack (quick rise)
+    const decayTime = 0.114; // 114ms decay (gentle decay)
     const attackSamples = Math.floor(attackTime * sampleRate);
     const decaySamples = Math.floor(decayTime * sampleRate);
     
-    // Frequency components for LUB (strong echo)
-    const fundamentalFreq = 90; // Deep fundamental for strong echo
-    const harmonicFreqs = [180, 270, 360, 450]; // Rich harmonics for brightness
+    // Frequency components for DUB (strong, pronounced)
+    const fundamentalFreq = 105; // Higher than LUB for contrast
+    const harmonicFreqs = [210, 315, 420, 525]; // Rich harmonics for fullness
     
     for (let i = 0; i < numSamples; i++) {
       const sampleIndex = startSample + i;
@@ -214,105 +263,66 @@ export class UltrasoundDopplerSynthesizer {
       
       const time = i / sampleRate;
       
-      // Envelope
+      // Envelope - quick rise, gentle decay
       let envelope = 0;
       if (i < attackSamples) {
-        envelope = i / attackSamples; // Linear attack
+        envelope = i / attackSamples; // Quick linear attack
       } else {
-        envelope = Math.exp(-(i - attackSamples) / (decaySamples * 0.4)); // Exponential decay
+        envelope = Math.exp(-(i - attackSamples) / (decaySamples * 0.7)); // Gentle exponential decay
       }
       
-      // LUB sound synthesis - strong echo, bright areas
-      let lub = 0;
-      
-      // Fundamental frequency
-      lub += Math.sin(2 * Math.PI * fundamentalFreq * time) * 0.5;
-      
-      // Rich harmonics for brightness
-      harmonicFreqs.forEach((freq, index) => {
-        const harmonicAmp = 0.3 / (index + 1.5); // Stronger harmonics for brightness
-        lub += Math.sin(2 * Math.PI * freq * time) * harmonicAmp;
-      });
-      
-      // Add brightness character
-      lub += Math.sin(2 * Math.PI * fundamentalFreq * 1.5 * time) * 0.2;
-      
-      // Apply envelope and amplitude
-      channelData[sampleIndex] += lub * envelope * amplitude * 0.9;
-    }
-  }
-
-  /**
-   * Generate DUB - weaker echo (gray areas)
-   */
-  private static generateDub(channelData: Float32Array, sampleRate: number, startTime: number, amplitude: number): void {
-    const startSample = Math.floor(startTime * sampleRate);
-    const duration = 0.08; // 80ms duration
-    const numSamples = Math.floor(duration * sampleRate);
-    
-    // DUB characteristics - weaker echo, gray areas
-    const attackTime = 0.01; // 10ms attack
-    const decayTime = 0.07; // 70ms decay
-    const attackSamples = Math.floor(attackTime * sampleRate);
-    const decaySamples = Math.floor(decayTime * sampleRate);
-    
-    // Frequency components for DUB (weaker echo)
-    const fundamentalFreq = 110; // Higher than LUB for contrast
-    const harmonicFreqs = [220, 330, 440]; // Fewer harmonics for gray areas
-    
-    for (let i = 0; i < numSamples; i++) {
-      const sampleIndex = startSample + i;
-      if (sampleIndex >= channelData.length) break;
-      
-      const time = i / sampleRate;
-      
-      // Envelope
-      let envelope = 0;
-      if (i < attackSamples) {
-        envelope = i / attackSamples; // Linear attack
-      } else {
-        envelope = Math.exp(-(i - attackSamples) / (decaySamples * 0.5)); // Faster decay
-      }
-      
-      // DUB sound synthesis - weaker echo, gray areas
+      // DUB sound synthesis - strong, pronounced pulse
       let dub = 0;
       
       // Fundamental frequency
-      dub += Math.sin(2 * Math.PI * fundamentalFreq * time) * 0.3;
+      dub += Math.sin(2 * Math.PI * fundamentalFreq * time) * 0.5;
       
-      // Fewer harmonics for gray areas
+      // Rich harmonics for fullness
       harmonicFreqs.forEach((freq, index) => {
-        const harmonicAmp = 0.15 / (index + 2); // Weaker harmonics
+        const harmonicAmp = 0.3 / (index + 1.3); // Strong harmonics for pronounced sound
         dub += Math.sin(2 * Math.PI * freq * time) * harmonicAmp;
       });
       
+      // Add warmth for inside-the-body character
+      dub += Math.sin(2 * Math.PI * fundamentalFreq * 0.6 * time) * 0.12;
+      
       // Apply envelope and amplitude
-      channelData[sampleIndex] += dub * envelope * amplitude * 0.6;
+      channelData[sampleIndex] += dub * envelope * amplitude * 1.0;
     }
   }
 
   /**
-   * Generate tissue background - flowing grayscale cross-sectional image
+   * Generate continuous whoosh background - warm, airy low-to-mid frequency noise
    */
   private static generateTissueBackground(channelData: Float32Array, sampleRate: number, duration: number): void {
     const numSamples = channelData.length;
     
-    // Generate flowing tissue background
+    // Generate continuous whoosh background (50-200 Hz)
     for (let i = 0; i < numSamples; i++) {
       const time = i / sampleRate;
       
-      // Flowing grayscale quality
-      const flowFreq = 0.5; // Slow flow
-      const flowModulation = 0.5 + 0.3 * Math.sin(2 * Math.PI * flowFreq * time);
+      // Warm, airy low-to-mid frequency noise (50-200 Hz)
+      let whoosh = 0;
       
-      // Tissue noise with flow
-      const tissueNoise = (Math.random() - 0.5) * 0.02 * flowModulation;
+      // Low frequency components (50-100 Hz)
+      const lowFreq1 = 60 + 20 * Math.sin(2 * Math.PI * 0.3 * time);
+      const lowFreq2 = 80 + 15 * Math.sin(2 * Math.PI * 0.4 * time);
+      whoosh += Math.sin(2 * Math.PI * lowFreq1 * time) * 0.15;
+      whoosh += Math.sin(2 * Math.PI * lowFreq2 * time) * 0.12;
       
-      // Add subtle tissue movement
-      const tissueFreq = 2.0; // Tissue movement frequency
-      const tissueMovement = 0.01 * Math.sin(2 * Math.PI * tissueFreq * time);
+      // Mid frequency components (100-200 Hz)
+      const midFreq1 = 120 + 30 * Math.sin(2 * Math.PI * 0.5 * time);
+      const midFreq2 = 160 + 25 * Math.sin(2 * Math.PI * 0.6 * time);
+      whoosh += Math.sin(2 * Math.PI * midFreq1 * time) * 0.08;
+      whoosh += Math.sin(2 * Math.PI * midFreq2 * time) * 0.06;
       
-      channelData[i] = tissueNoise + tissueMovement;
+      // Add subtle airy noise
+      const airyNoise = (Math.random() - 0.5) * 0.03;
+      
+      // Flowing modulation
+      const flowModulation = 0.7 + 0.3 * Math.sin(2 * Math.PI * 0.8 * time);
+      
+      channelData[i] = (whoosh + airyNoise) * flowModulation * 0.4; // Softer underlying whoosh
     }
   }
 
