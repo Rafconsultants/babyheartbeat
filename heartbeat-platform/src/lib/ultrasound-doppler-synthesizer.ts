@@ -188,22 +188,21 @@ export class UltrasoundDopplerSynthesizer {
   }
 
   /**
-   * Generate LUB - strong, pronounced pulse
+   * Generate LUB - loud, clear thump from low-frequency noise burst
    */
   private static generateLub(channelData: Float32Array, sampleRate: number, startTime: number, amplitude: number): void {
     const startSample = Math.floor(startTime * sampleRate);
-    const duration = 0.15; // 150ms duration
+    const duration = 0.08; // 80ms duration (shorter burst)
     const numSamples = Math.floor(duration * sampleRate);
     
-    // LUB characteristics - strong, pronounced pulse
-    const attackTime = 0.008; // 8ms attack (quick rise)
-    const decayTime = 0.142; // 142ms decay (gentle decay)
+    // LUB characteristics - fast attack, soft decay
+    const attackTime = 0.003; // 3ms attack (very fast)
+    const decayTime = 0.077; // 77ms decay (soft decay)
     const attackSamples = Math.floor(attackTime * sampleRate);
     const decaySamples = Math.floor(decayTime * sampleRate);
     
-    // Frequency components for LUB (strong, pronounced)
-    const fundamentalFreq = 85; // Deep fundamental for strong pulse
-    const harmonicFreqs = [170, 255, 340, 425]; // Rich harmonics for fullness
+    // Low-frequency noise burst (50-200 Hz)
+    const lowFreqRange = [50, 75, 100, 125, 150, 175, 200];
     
     for (let i = 0; i < numSamples; i++) {
       const sampleIndex = startSample + i;
@@ -211,51 +210,51 @@ export class UltrasoundDopplerSynthesizer {
       
       const time = i / sampleRate;
       
-      // Envelope - quick rise, gentle decay
+      // Envelope - fast attack, soft decay
       let envelope = 0;
       if (i < attackSamples) {
-        envelope = i / attackSamples; // Quick linear attack
+        envelope = i / attackSamples; // Very fast linear attack
       } else {
-        envelope = Math.exp(-(i - attackSamples) / (decaySamples * 0.6)); // Gentle exponential decay
+        envelope = Math.exp(-(i - attackSamples) / (decaySamples * 0.8)); // Soft exponential decay
       }
       
-      // LUB sound synthesis - strong, pronounced pulse
+      // LUB sound synthesis - low-frequency noise burst
       let lub = 0;
       
-      // Fundamental frequency
-      lub += Math.sin(2 * Math.PI * fundamentalFreq * time) * 0.6;
-      
-      // Rich harmonics for fullness
-      harmonicFreqs.forEach((freq, index) => {
-        const harmonicAmp = 0.35 / (index + 1.2); // Strong harmonics for pronounced sound
-        lub += Math.sin(2 * Math.PI * freq * time) * harmonicAmp;
+      // Multiple low-frequency components (50-200 Hz)
+      lowFreqRange.forEach((freq, index) => {
+        const freqAmp = 0.4 / (index + 1); // Decreasing amplitude for higher frequencies
+        lub += Math.sin(2 * Math.PI * freq * time) * freqAmp;
       });
       
-      // Add warmth for inside-the-body character
-      lub += Math.sin(2 * Math.PI * fundamentalFreq * 0.5 * time) * 0.15;
+      // Add some noise for thump character
+      const noise = (Math.random() - 0.5) * 0.2;
+      lub += noise;
       
-      // Apply envelope and amplitude
-      channelData[sampleIndex] += lub * envelope * amplitude * 1.1;
+      // Add warmth for inside-the-body character
+      lub += Math.sin(2 * Math.PI * 60 * time) * 0.15;
+      
+      // Apply envelope and amplitude (loud and clear)
+      channelData[sampleIndex] += lub * envelope * amplitude * 1.5;
     }
   }
 
   /**
-   * Generate DUB - strong, pronounced pulse
+   * Generate DUB - loud, clear thump from low-frequency noise burst
    */
   private static generateDub(channelData: Float32Array, sampleRate: number, startTime: number, amplitude: number): void {
     const startSample = Math.floor(startTime * sampleRate);
-    const duration = 0.12; // 120ms duration
+    const duration = 0.07; // 70ms duration (shorter burst)
     const numSamples = Math.floor(duration * sampleRate);
     
-    // DUB characteristics - strong, pronounced pulse
-    const attackTime = 0.006; // 6ms attack (quick rise)
-    const decayTime = 0.114; // 114ms decay (gentle decay)
+    // DUB characteristics - fast attack, soft decay
+    const attackTime = 0.002; // 2ms attack (very fast)
+    const decayTime = 0.068; // 68ms decay (soft decay)
     const attackSamples = Math.floor(attackTime * sampleRate);
     const decaySamples = Math.floor(decayTime * sampleRate);
     
-    // Frequency components for DUB (strong, pronounced)
-    const fundamentalFreq = 105; // Higher than LUB for contrast
-    const harmonicFreqs = [210, 315, 420, 525]; // Rich harmonics for fullness
+    // Low-frequency noise burst (50-200 Hz) - slightly different from LUB
+    const lowFreqRange = [55, 80, 105, 130, 155, 180, 195];
     
     for (let i = 0; i < numSamples; i++) {
       const sampleIndex = startSample + i;
@@ -263,66 +262,66 @@ export class UltrasoundDopplerSynthesizer {
       
       const time = i / sampleRate;
       
-      // Envelope - quick rise, gentle decay
+      // Envelope - fast attack, soft decay
       let envelope = 0;
       if (i < attackSamples) {
-        envelope = i / attackSamples; // Quick linear attack
+        envelope = i / attackSamples; // Very fast linear attack
       } else {
-        envelope = Math.exp(-(i - attackSamples) / (decaySamples * 0.7)); // Gentle exponential decay
+        envelope = Math.exp(-(i - attackSamples) / (decaySamples * 0.9)); // Soft exponential decay
       }
       
-      // DUB sound synthesis - strong, pronounced pulse
+      // DUB sound synthesis - low-frequency noise burst
       let dub = 0;
       
-      // Fundamental frequency
-      dub += Math.sin(2 * Math.PI * fundamentalFreq * time) * 0.5;
-      
-      // Rich harmonics for fullness
-      harmonicFreqs.forEach((freq, index) => {
-        const harmonicAmp = 0.3 / (index + 1.3); // Strong harmonics for pronounced sound
-        dub += Math.sin(2 * Math.PI * freq * time) * harmonicAmp;
+      // Multiple low-frequency components (50-200 Hz)
+      lowFreqRange.forEach((freq, index) => {
+        const freqAmp = 0.35 / (index + 1.2); // Decreasing amplitude for higher frequencies
+        dub += Math.sin(2 * Math.PI * freq * time) * freqAmp;
       });
       
-      // Add warmth for inside-the-body character
-      dub += Math.sin(2 * Math.PI * fundamentalFreq * 0.6 * time) * 0.12;
+      // Add some noise for thump character
+      const noise = (Math.random() - 0.5) * 0.18;
+      dub += noise;
       
-      // Apply envelope and amplitude
-      channelData[sampleIndex] += dub * envelope * amplitude * 1.0;
+      // Add warmth for inside-the-body character
+      dub += Math.sin(2 * Math.PI * 65 * time) * 0.12;
+      
+      // Apply envelope and amplitude (loud and clear)
+      channelData[sampleIndex] += dub * envelope * amplitude * 1.3;
     }
   }
 
   /**
-   * Generate continuous whoosh background - warm, airy low-to-mid frequency noise
+   * Generate continuous whooshing pink-noise background
    */
   private static generateTissueBackground(channelData: Float32Array, sampleRate: number, duration: number): void {
     const numSamples = channelData.length;
     
-    // Generate continuous whoosh background (50-200 Hz)
+    // Generate continuous whooshing pink-noise background
     for (let i = 0; i < numSamples; i++) {
       const time = i / sampleRate;
       
-      // Warm, airy low-to-mid frequency noise (50-200 Hz)
+      // Pink noise characteristics (quieter, continuous whoosh)
       let whoosh = 0;
       
-      // Low frequency components (50-100 Hz)
-      const lowFreq1 = 60 + 20 * Math.sin(2 * Math.PI * 0.3 * time);
-      const lowFreq2 = 80 + 15 * Math.sin(2 * Math.PI * 0.4 * time);
-      whoosh += Math.sin(2 * Math.PI * lowFreq1 * time) * 0.15;
-      whoosh += Math.sin(2 * Math.PI * lowFreq2 * time) * 0.12;
+      // Pink noise spectrum (more energy in lower frequencies)
+      const pinkFreqs = [30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210];
       
-      // Mid frequency components (100-200 Hz)
-      const midFreq1 = 120 + 30 * Math.sin(2 * Math.PI * 0.5 * time);
-      const midFreq2 = 160 + 25 * Math.sin(2 * Math.PI * 0.6 * time);
-      whoosh += Math.sin(2 * Math.PI * midFreq1 * time) * 0.08;
-      whoosh += Math.sin(2 * Math.PI * midFreq2 * time) * 0.06;
+      pinkFreqs.forEach((freq, index) => {
+        // Pink noise: amplitude decreases with frequency
+        const pinkAmp = 0.25 / Math.sqrt(index + 1);
+        whoosh += Math.sin(2 * Math.PI * freq * time) * pinkAmp;
+      });
       
-      // Add subtle airy noise
-      const airyNoise = (Math.random() - 0.5) * 0.03;
+      // Add some random noise for whoosh character
+      const randomNoise = (Math.random() - 0.5) * 0.05;
+      whoosh += randomNoise;
       
-      // Flowing modulation
-      const flowModulation = 0.7 + 0.3 * Math.sin(2 * Math.PI * 0.8 * time);
+      // Continuous flowing modulation
+      const flowModulation = 0.8 + 0.2 * Math.sin(2 * Math.PI * 1.2 * time);
       
-      channelData[i] = (whoosh + airyNoise) * flowModulation * 0.4; // Softer underlying whoosh
+      // Quieter background (never stops)
+      channelData[i] = (whoosh * flowModulation) * 0.25; // Much quieter than thumps
     }
   }
 
