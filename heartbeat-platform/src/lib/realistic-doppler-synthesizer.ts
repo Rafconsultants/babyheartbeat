@@ -1,17 +1,16 @@
-// Realistic Fetal Doppler Ultrasound Synthesizer
-// Creates authentic fetal heartbeat sounds using noise-driven pulses
-// Matches real Doppler acoustic properties: 150-300 Hz thump + high-frequency hiss
-// Dynamic background modulation with organic timing variations
-
-import { WaveformData } from './waveform-extractor';
+/**
+ * Realistic Fetal Doppler Ultrasound Heartbeat Synthesizer
+ * Implements exact specifications for authentic fetal Doppler sounds
+ */
 
 export interface RealisticDopplerOptions {
-  waveformData: WaveformData;
   bpm: number;
-  duration: number; // in seconds
+  duration: number;
   sampleRate: number;
-  isWatermarked: boolean;
-  stereo: boolean;
+  hasDoublePulse?: boolean;
+  doublePulseOffset?: number; // ms
+  timingVariability?: number; // ms
+  amplitudeVariation?: number; // 0-1
 }
 
 export interface RealisticDopplerResult {
@@ -19,7 +18,7 @@ export interface RealisticDopplerResult {
   duration: number;
   bpm: number;
   fileSize: number;
-  waveformUsed: boolean;
+  hasDoublePulse: boolean;
 }
 
 export class RealisticDopplerSynthesizer {
@@ -28,461 +27,351 @@ export class RealisticDopplerSynthesizer {
   /**
    * Generate realistic fetal Doppler ultrasound heartbeat audio
    */
-  static async generateRealisticDopplerAudio(options: RealisticDopplerOptions): Promise<RealisticDopplerResult> {
-    console.log('🎵 Starting realistic Doppler synthesis');
+  static async generateRealisticDoppler(options: RealisticDopplerOptions): Promise<RealisticDopplerResult> {
+    console.log('🎵 Starting realistic fetal Doppler synthesis');
+    console.log('🎵 Options:', options);
 
     try {
-      if (!this.audioContext) {
-        this.audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      // Initialize AudioContext
+      if (typeof window === 'undefined') {
+        throw new Error('Not in browser environment');
       }
 
-      const audioBuffer = await this.createRealisticDopplerWaveform(options);
-      const audioBlob = await this.audioBufferToBlob(audioBuffer);
+      if (!this.audioContext) {
+        try {
+          this.audioContext = new AudioContext();
+        } catch (error) {
+          console.warn('🎵 Standard AudioContext failed, trying webkitAudioContext:', error);
+          try {
+            this.audioContext = new (window as any).webkitAudioContext();
+          } catch (webkitError) {
+            throw new Error('AudioContext not supported in this browser');
+          }
+        }
+      }
+
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
+
+      console.log('🎵 AudioContext ready, state:', this.audioContext.state);
+
+      // Create mono audio buffer
+      const buffer = this.audioContext.createBuffer(1, options.sampleRate * options.duration, options.sampleRate);
+      const channelData = buffer.getChannelData(0);
+
+      // Generate realistic Doppler heartbeat
+      this.generateRealisticDopplerWaveform(channelData, options);
+
+      // Convert to WAV and create blob
+      const wavBuffer = this.audioBufferToWAV(buffer);
+      const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' });
       const audioUrl = URL.createObjectURL(audioBlob);
+
+      console.log('🎵 Realistic Doppler synthesis completed');
+      console.log('🎵 Audio blob size:', audioBlob.size, 'bytes');
 
       return {
         audioUrl,
         duration: options.duration,
         bpm: options.bpm,
         fileSize: audioBlob.size,
-        waveformUsed: options.waveformData.hasWaveform
+        hasDoublePulse: options.hasDoublePulse || false
       };
+
     } catch (error) {
       console.error('❌ Realistic Doppler synthesis failed:', error);
-      throw new Error('Failed to generate realistic Doppler heartbeat audio');
+      throw new Error(`Failed to generate realistic Doppler audio: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   /**
-   * Create realistic Doppler ultrasound waveform
+   * Generate the realistic Doppler waveform with exact specifications
    */
-  private static async createRealisticDopplerWaveform(options: RealisticDopplerOptions): Promise<AudioBuffer> {
-    const { waveformData, sampleRate, stereo } = options;
-    const duration = 8.000; // Fixed duration
+  private static generateRealisticDopplerWaveform(channelData: Float32Array, options: RealisticDopplerOptions): void {
+    const { bpm, duration, sampleRate, hasDoublePulse = false, doublePulseOffset = 55, timingVariability = 15, amplitudeVariation = 0.1 } = options;
 
-    console.log('🎵 Creating realistic Doppler waveform');
+    console.log('🎵 Generating realistic Doppler waveform...');
 
-    const channels = stereo ? 2 : 1;
-    const buffer = this.audioContext!.createBuffer(channels, sampleRate * duration, sampleRate);
+    // Calculate beat timing
+    const beatInterval = 60 / bpm; // seconds between beats
+    const totalSamples = channelData.length;
 
-    // Prepare beat timing data with organic variations
-    const beatData = this.prepareBeatDataWithOrganicVariations(waveformData, options.bpm, duration);
-    
-    console.log('🎵 Beat data prepared:', { 
-      beatCount: beatData.times.length, 
-      hasDoublePulse: beatData.doublePulseOffsets.some(offset => offset !== null)
-    });
+    console.log('🎵 Beat interval:', beatInterval, 'seconds');
+    console.log('🎵 Total samples:', totalSamples);
 
-    // Generate realistic Doppler audio for each channel
-    for (let channel = 0; channel < channels; channel++) {
-      const channelData = buffer.getChannelData(channel);
-      
-      // Generate dynamic background noise floor
-      this.generateDynamicBackground(channelData, sampleRate, beatData, channel);
-      
-      // Generate noise-driven heartbeat pulses
-      this.generateNoiseDrivenHeartbeats(channelData, sampleRate, beatData, channel);
-      
-      // Apply realistic Doppler processing
-      this.applyRealisticDopplerProcessing(channelData, sampleRate, channel);
+    // Generate pink noise floor (-36 to -42 dBFS)
+    const pinkNoiseFloor = this.generatePinkNoiseFloor(totalSamples, -39); // -39 dBFS average
+
+    // Fill with pink noise floor
+    for (let i = 0; i < totalSamples; i++) {
+      channelData[i] = pinkNoiseFloor[i];
     }
 
-    // Add watermark if needed
-    if (options.isWatermarked) {
-      this.addWatermark(buffer, sampleRate);
-    }
+    // Generate heartbeat pattern
+    let currentTime = 0.2; // Start first beat at 200ms
+    let beatCount = 0;
 
-    console.log('🎵 Realistic Doppler waveform creation completed');
-    return buffer;
-  }
-
-  /**
-   * Prepare beat data with organic timing variations
-   */
-  private static prepareBeatDataWithOrganicVariations(waveformData: WaveformData, bpm: number, duration: number) {
-    if (waveformData.hasWaveform && waveformData.beatTimes.length > 0) {
-      return {
-        times: waveformData.beatTimes,
-        amplitudes: waveformData.amplitudes,
-        doublePulseOffsets: waveformData.doublePulseOffsets,
-        isExtracted: true
-      };
-    } else {
-      // Generate fallback pattern with organic variations
-      const baseInterval = 60 / bpm;
-      const startTime = 0.2;
-      const times: number[] = [];
-      const amplitudes: number[] = [];
-      const doublePulseOffsets: (number | null)[] = [];
+    while (currentTime < duration) {
+      // Add timing variability (±10-20ms)
+      const timingJitter = (Math.random() - 0.5) * (timingVariability / 1000);
+      const actualBeatTime = currentTime + timingJitter;
       
-      let currentTime = startTime;
-      while (currentTime < duration) {
-        // Add organic timing variability (±10-20ms as specified)
-        const jitter = (Math.random() - 0.5) * 0.03; // ±15ms variation
-        const interval = baseInterval + jitter;
-        
-        times.push(Number(currentTime.toFixed(3)));
-        
-        // Natural amplitude variation
-        const baseAmplitude = 0.9;
-        const amplitudeVariation = 1.0 + (Math.random() - 0.5) * 0.2;
-        amplitudes.push(Math.max(0.75, Math.min(1.0, baseAmplitude * amplitudeVariation)));
-        
-        // Add double pulse (systolic/diastolic) - common in fetal heartbeats
-        const hasDoublePulse = Math.random() > 0.1; // 90% chance
-        if (hasDoublePulse) {
-          const spacing = 0.05 + (Math.random() - 0.5) * 0.015; // 42.5-57.5ms spacing
-          doublePulseOffsets.push(Number((spacing * 1000).toFixed(1)));
-        } else {
-          doublePulseOffsets.push(null);
-        }
-        
-        currentTime += interval;
+      // Add amplitude variation
+      const amplitudeJitter = 1 + (Math.random() - 0.5) * amplitudeVariation;
+      
+      // Generate primary beat
+      this.generateNoiseBurst(
+        channelData,
+        actualBeatTime,
+        sampleRate,
+        amplitudeJitter,
+        true
+      );
+
+      // Generate secondary beat for double pulse
+      if (hasDoublePulse) {
+        const secondaryTime = actualBeatTime + (doublePulseOffset / 1000);
+        this.generateNoiseBurst(
+          channelData,
+          secondaryTime,
+          sampleRate,
+          amplitudeJitter * 0.6, // 60% of primary amplitude
+          false
+        );
       }
-      
-      return {
-        times,
-        amplitudes,
-        doublePulseOffsets,
-        isExtracted: false
-      };
+
+      // Modulate background noise with beat activity
+      this.modulateBackgroundNoise(
+        channelData,
+        actualBeatTime,
+        beatInterval,
+        sampleRate
+      );
+
+      currentTime += beatInterval;
+      beatCount++;
     }
+
+    // Apply band-pass filter (200-1200 Hz with emphasis 150-300 Hz)
+    this.applyBandPassFilter(channelData, sampleRate);
+
+    console.log(`🎵 Generated ${beatCount} beats at ${bpm} BPM`);
   }
 
   /**
-   * Generate dynamic background noise floor
+   * Generate a noise burst with exact attack/decay specifications
    */
-  private static generateDynamicBackground(channelData: Float32Array, sampleRate: number, beatData: any, channelIndex: number) {
-    console.log('🎵 Generating dynamic background noise floor');
+  private static generateNoiseBurst(
+    channelData: Float32Array,
+    startTime: number,
+    sampleRate: number,
+    amplitude: number,
+    isPrimary: boolean
+  ): void {
+    const startSample = Math.floor(startTime * sampleRate);
     
-    for (let i = 0; i < channelData.length; i++) {
-      const time = i / sampleRate;
-      
-      // Calculate distance to nearest beat for dynamic modulation
-      const distanceToBeat = this.getDistanceToNearestBeat(time, beatData.times);
-      
-      // Create warm, fluid background noise
-      // Use multiple noise bands to create organic texture
-      let background = 0;
-      
-      // Low-frequency warmth (100-400 Hz)
-      const warmFreq = 200 + Math.sin(time * 0.1) * 100;
-      background += Math.sin(2 * Math.PI * warmFreq * time) * 0.08;
-      
-      // Mid-frequency body (400-800 Hz)
-      const bodyFreq = 600 + Math.sin(time * 0.2) * 200;
-      background += Math.sin(2 * Math.PI * bodyFreq * time) * 0.06;
-      
-      // High-frequency air (800-1500 Hz)
-      const airFreq = 1200 + Math.sin(time * 0.3) * 350;
-      background += Math.sin(2 * Math.PI * airFreq * time) * 0.04;
-      
-      // Add broadband noise for organic texture
-      background += (Math.random() - 0.5) * 0.12;
-      
-      // Dynamic modulation - rises with each beat, drops between beats
-      const modulationLevel = this.calculateDynamicModulation(distanceToBeat);
-      background *= modulationLevel;
-      
-      // Add subtle movement simulation
-      const movement = Math.sin(time * 0.15) * 0.02;
-      background += movement;
-      
-      // Stereo variation
-      const stereoVariation = channelIndex === 1 ? 0.94 : 1.0;
-      
-      channelData[i] = background * stereoVariation;
-    }
-  }
+    if (startSample >= channelData.length) return;
+    
+    // Attack: 5-10ms, Decay: 60-100ms (exact specifications)
+    const attackTime = isPrimary ? 0.008 : 0.006; // 8ms for primary, 6ms for secondary
+    const decayTime = isPrimary ? 0.080 : 0.060; // 80ms for primary, 60ms for secondary
+    
+    const attackSamples = Math.floor(attackTime * sampleRate);
+    const decaySamples = Math.floor(decayTime * sampleRate);
+    const totalSamples = attackSamples + decaySamples;
+    
+    const maxAmplitude = amplitude * 0.5; // Strong amplitude for clear beats
 
-  /**
-   * Generate noise-driven heartbeat pulses
-   */
-  private static generateNoiseDrivenHeartbeats(channelData: Float32Array, sampleRate: number, beatData: any, channelIndex: number) {
-    console.log('🎵 Generating noise-driven heartbeat pulses');
-    
-    for (let i = 0; i < beatData.times.length; i++) {
-      const beatTime = beatData.times[i];
-      const amplitude = beatData.amplitudes[i];
-      const doublePulseOffset = beatData.doublePulseOffsets[i];
-      
-      const startSample = Math.floor(beatTime * sampleRate);
-      
-      // Generate primary heartbeat pulse
-      this.generateNoiseDrivenPulse(channelData, startSample, sampleRate, amplitude, channelIndex, i);
-      
-      // Generate secondary pulse if present (systolic/diastolic)
-      if (doublePulseOffset !== null) {
-        const secondPulseStart = startSample + Math.floor(doublePulseOffset * sampleRate / 1000);
-        const secondPulseAmplitude = amplitude * 0.6; // Softer secondary amplitude
-        
-        if (secondPulseStart < channelData.length) {
-          this.generateNoiseDrivenPulse(channelData, secondPulseStart, sampleRate, secondPulseAmplitude, channelIndex, i);
-        }
-      }
-    }
-  }
+    console.log(`🎵 Generating burst: start=${startSample}, attack=${attackSamples}, decay=${decaySamples}, total=${totalSamples}`);
 
-  /**
-   * Generate a single noise-driven heartbeat pulse
-   */
-  private static generateNoiseDrivenPulse(channelData: Float32Array, startSample: number, sampleRate: number, amplitude: number, channelIndex: number, pulseIndex: number) {
-    // Realistic pulse duration
-    const pulseDuration = 0.08; // 80ms pulse duration
-    const pulseSamples = Math.floor(pulseDuration * sampleRate);
-    
-    // Create noise-driven pulse with proper frequency characteristics
-    for (let i = 0; i < pulseSamples; i++) {
+    for (let i = 0; i < totalSamples; i++) {
       const sampleIndex = startSample + i;
       if (sampleIndex >= channelData.length) break;
-      
-      const time = i / sampleRate;
-      
-      // Create the noise-driven pulse
-      let pulse = 0;
-      
-      // 1. Rounded mid-frequency 'thump' (150-300 Hz) - the core heartbeat sound
-      const thumpFreq = 180 + (Math.random() - 0.5) * 60; // 150-210 Hz
-      const thumpFreq2 = 240 + (Math.random() - 0.5) * 60; // 210-270 Hz
-      
-      pulse += Math.sin(2 * Math.PI * thumpFreq * time) * 0.9;
-      pulse += Math.sin(2 * Math.PI * thumpFreq2 * time) * 0.5;
-      
-      // 2. Subtle high-frequency hiss (800-1500 Hz)
-      const hissFreq = 1000 + (Math.random() - 0.5) * 400;
-      const hissFreq2 = 1300 + (Math.random() - 0.5) * 400;
-      
-      pulse += Math.sin(2 * Math.PI * hissFreq * time) * 0.15;
-      pulse += Math.sin(2 * Math.PI * hissFreq2 * time) * 0.12;
-      
-      // 3. Noise-driven components for organic texture
-      // Add different noise textures per beat to keep it organic
-      const noiseSeed = (pulseIndex * 1000 + i) % 1000;
-      const noise1 = this.generateSeededNoise(noiseSeed) * 0.2;
-      const noise2 = this.generateSeededNoise(noiseSeed + 100) * 0.15;
-      
-      pulse += noise1 + noise2;
-      
-      // 4. Lower frequency warmth (60-120 Hz)
-      const warmFreq = 90 + (Math.random() - 0.5) * 30;
-      pulse += Math.sin(2 * Math.PI * warmFreq * time) * 0.4;
-      
-      // Apply authentic envelope shape
-      const envelope = this.calculatePulseEnvelope(i, pulseSamples);
-      
-      // Add small noise texture differences per beat
-      const textureVariation = 1.0 + (Math.random() - 0.5) * 0.1;
-      
-      // Stereo variation
-      const stereoVariation = channelIndex === 1 ? 0.97 : 1.0;
-      
-      const finalPulse = pulse * envelope * amplitude * textureVariation * stereoVariation;
-      channelData[sampleIndex] += finalPulse;
-    }
-  }
 
-  /**
-   * Generate seeded noise for consistent texture per beat
-   */
-  private static generateSeededNoise(seed: number): number {
-    // Simple seeded random function
-    const x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
-  }
-
-  /**
-   * Calculate pulse envelope shape
-   */
-  private static calculatePulseEnvelope(sampleIndex: number, totalSamples: number): number {
-    const progress = sampleIndex / totalSamples;
-    
-    // Sharp attack and natural decay for realistic pulse
-    if (progress < 0.08) {
-      // Sharp attack (8% of duration)
-      return Math.pow(progress / 0.08, 0.7); // Slightly curved attack
-    } else if (progress < 0.25) {
-      // Short sustain (17% of duration)
-      return 1.0;
-    } else {
-      // Natural decay (75% of duration)
-      const decayProgress = (progress - 0.25) / 0.75;
-      // Natural exponential decay with slight curve
-      return Math.exp(-decayProgress * 2.8) * (1 - decayProgress * 0.2);
-    }
-  }
-
-  /**
-   * Calculate dynamic background modulation
-   */
-  private static calculateDynamicModulation(distanceToBeat: number): number {
-    const modulationWidth = 0.25; // 250ms modulation width
-    if (distanceToBeat < modulationWidth) {
-      // Rise with beat, drop between beats
-      const modulationProgress = distanceToBeat / modulationWidth;
-      // Use a curve that creates natural rise and fall
-      return 0.4 + Math.pow(modulationProgress, 1.2) * 0.6; // 40% to 100%
-    }
-    return 0.4; // Lower background level between beats
-  }
-
-  /**
-   * Apply realistic Doppler processing
-   */
-  private static applyRealisticDopplerProcessing(channelData: Float32Array, sampleRate: number, channelIndex: number): void {
-    // Apply gentle compression for warmth
-    const threshold = 0.7;
-    const ratio = 2.0;
-    const makeupGain = 1.05;
-    
-    for (let i = 0; i < channelData.length; i++) {
-      const input = Math.abs(channelData[i]);
+      const timeInBurst = i / sampleRate;
       
-      if (input > threshold) {
-        const excess = input - threshold;
-        const compressedExcess = excess / ratio;
-        const output = threshold + compressedExcess;
-        channelData[i] = Math.sign(channelData[i]) * output * makeupGain;
+      // Calculate envelope with exact specifications
+      let envelope = 0;
+      if (i < attackSamples) {
+        // Attack: linear rise (5-10ms)
+        envelope = i / attackSamples;
       } else {
-        channelData[i] *= makeupGain;
+        // Decay: exponential fall (60-100ms)
+        const decayTimeInBurst = (i - attackSamples) / sampleRate;
+        envelope = Math.exp(-decayTimeInBurst * 8); // Fast decay for realistic sound
       }
-    }
-    
-    // Apply gentle low-pass filtering for warmth
-    let prevSample = 0;
-    const filterCoeff = 0.98;
-    
-    for (let i = 0; i < channelData.length; i++) {
-      const currentSample = channelData[i];
-      channelData[i] = currentSample * (1 - filterCoeff) + prevSample * filterCoeff;
-      prevSample = currentSample;
-    }
-    
-    // Add subtle fluid movement
-    for (let i = 0; i < channelData.length; i++) {
-      const time = i / sampleRate;
-      const fluidMovement = Math.sin(time * 0.12) * 0.015;
-      channelData[i] += fluidMovement;
-    }
-    
-    // Final normalization to prevent clipping
-    let maxLevel = 0;
-    for (let i = 0; i < channelData.length; i++) {
-      maxLevel = Math.max(maxLevel, Math.abs(channelData[i]));
-    }
-    
-    if (maxLevel > 0.95) {
-      const normalizeGain = 0.95 / maxLevel;
-      for (let i = 0; i < channelData.length; i++) {
-        channelData[i] *= normalizeGain;
-      }
-    }
-  }
 
-  /**
-   * Get distance to nearest beat
-   */
-  private static getDistanceToNearestBeat(time: number, beatTimes: number[]): number {
-    if (beatTimes.length === 0) return 1.0;
-    
-    let minDistance = Infinity;
-    for (const beatTime of beatTimes) {
-      const distance = Math.abs(time - beatTime);
-      minDistance = Math.min(minDistance, distance);
-    }
-    
-    return minDistance;
-  }
-
-  /**
-   * Add watermark
-   */
-  private static addWatermark(buffer: AudioBuffer, sampleRate: number): void {
-    const watermarkFreq = 15000;
-    const watermarkDuration = 0.5;
-    const watermarkSamples = Math.floor(watermarkDuration * sampleRate);
-    const watermarkAmplitude = 0.01;
-    
-    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
-      const channelData = buffer.getChannelData(channel);
+      // Generate filtered noise with band-pass characteristics
+      const noise = this.generateFilteredNoise(timeInBurst);
+      const sample = noise * envelope * maxAmplitude;
       
-      for (let i = 0; i < Math.min(watermarkSamples, channelData.length); i++) {
-        const time = i / sampleRate;
-        const fadeIn = Math.min(1, i / (sampleRate * 0.1));
-        const fadeOut = Math.min(1, (watermarkSamples - i) / (sampleRate * 0.1));
-        const envelope = fadeIn * fadeOut;
-        
-        const watermark = Math.sin(time * watermarkFreq * 2 * Math.PI) * watermarkAmplitude * envelope;
-        channelData[i] += watermark;
-      }
+      channelData[sampleIndex] += sample;
     }
   }
 
   /**
-   * Convert AudioBuffer to Blob
+   * Generate filtered noise with band-pass characteristics (200-1200 Hz, emphasis 150-300 Hz)
    */
-  private static async audioBufferToBlob(audioBuffer: AudioBuffer): Promise<Blob> {
-    console.log('🎵 Converting AudioBuffer to Blob...');
-    const wavBuffer = this.createWAVFile(audioBuffer);
-    console.log('🎵 WAV file created, size:', wavBuffer.byteLength, 'bytes');
-    return new Blob([wavBuffer], { type: 'audio/wav' });
+  private static generateFilteredNoise(time: number): number {
+    let filteredNoise = 0;
+    
+    // Primary emphasis band (150-300 Hz) - the "thump"
+    const primaryFreq = 200 + Math.random() * 100; // 200-300 Hz
+    filteredNoise += Math.sin(2 * Math.PI * primaryFreq * time) * 1.0; // Strong emphasis
+    
+    // Secondary band (300-600 Hz) - body
+    const secondaryFreq = 400 + Math.random() * 200;
+    filteredNoise += Math.sin(2 * Math.PI * secondaryFreq * time) * 0.6;
+    
+    // Upper band (600-1200 Hz) - brightness
+    const upperFreq = 800 + Math.random() * 400;
+    filteredNoise += Math.sin(2 * Math.PI * upperFreq * time) * 0.4;
+    
+    // Add broadband noise for authenticity
+    filteredNoise += (Math.random() - 0.5) * 0.3;
+    
+    return filteredNoise * 0.7; // Normalize
   }
 
   /**
-   * Create WAV file
+   * Generate pink noise floor (-36 to -42 dBFS)
    */
-  private static createWAVFile(audioBuffer: AudioBuffer): ArrayBuffer {
-    const length = audioBuffer.length;
-    const sampleRate = audioBuffer.sampleRate;
-    const channels = audioBuffer.numberOfChannels;
-    const bitsPerSample = 16;
-    const bytesPerSample = bitsPerSample / 8;
-    const blockAlign = channels * bytesPerSample;
-    const byteRate = sampleRate * blockAlign;
-    const dataSize = length * blockAlign;
-    const bufferSize = 44 + dataSize;
-
-    const buffer = new ArrayBuffer(bufferSize);
-    const view = new DataView(buffer);
-
-    // WAV file header
-    let offset = 0;
-    view.setUint32(offset, 0x52494646, false); // "RIFF"
-    offset += 4;
-    view.setUint32(offset, 36 + dataSize, true); // File size
-    offset += 4;
-    view.setUint32(offset, 0x57415645, false); // "WAVE"
-    offset += 4;
-    view.setUint32(offset, 0x666d7420, false); // "fmt "
-    offset += 4;
-    view.setUint32(offset, 16, true); // Chunk size
-    offset += 4;
-    view.setUint16(offset, 1, true); // Audio format (PCM)
-    offset += 2;
-    view.setUint16(offset, channels, true); // Number of channels
-    offset += 2;
-    view.setUint32(offset, sampleRate, true); // Sample rate
-    offset += 4;
-    view.setUint32(offset, byteRate, true); // Byte rate
-    offset += 4;
-    view.setUint16(offset, blockAlign, true); // Block align
-    offset += 2;
-    view.setUint16(offset, bitsPerSample, true); // Bits per sample
-    offset += 2;
-    view.setUint32(offset, 0x64617461, false); // "data"
-    offset += 4;
-    view.setUint32(offset, dataSize, true); // Data size
-    offset += 4;
-
-    // Audio data
+  private static generatePinkNoiseFloor(length: number, levelDB: number): Float32Array {
+    const pinkNoise = new Float32Array(length);
+    const level = Math.pow(10, levelDB / 20); // Convert dB to linear
+    
+    // Pink noise generation using multiple filters
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0;
+    
     for (let i = 0; i < length; i++) {
-      for (let channel = 0; channel < channels; channel++) {
-        const channelData = audioBuffer.getChannelData(channel);
-        const sample = Math.max(-1, Math.min(1, channelData[i]));
-        view.setInt16(offset, sample * 0x7FFF, true);
-        offset += 2;
+      const white = (Math.random() - 0.5) * 2;
+      
+      // Pink noise filters
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.96900 * b2 + white * 0.1538520;
+      b3 = 0.86650 * b3 + white * 0.3104856;
+      b4 = 0.55000 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.0168980;
+      
+      pinkNoise[i] = (b0 + b1 + b2 + b3 + b4 + b5) * level;
+    }
+    
+    return pinkNoise;
+  }
+
+  /**
+   * Modulate background noise with beat activity
+   */
+  private static modulateBackgroundNoise(
+    channelData: Float32Array,
+    beatTime: number,
+    beatInterval: number,
+    sampleRate: number
+  ): void {
+    const beatStartSample = Math.floor(beatTime * sampleRate);
+    const beatEndSample = Math.floor((beatTime + beatInterval) * sampleRate);
+    
+    // Rise background noise during beat, fall between beats
+    for (let i = beatStartSample; i < beatEndSample && i < channelData.length; i++) {
+      const timeInBeat = (i - beatStartSample) / sampleRate;
+      const beatProgress = timeInBeat / beatInterval;
+      
+      // Rise during first 20% of beat interval, then fall
+      let modulation = 1.0;
+      if (beatProgress < 0.2) {
+        // Rise phase
+        modulation = 1.0 + beatProgress * 0.3; // Rise to 1.3x
+      } else {
+        // Fall phase
+        const fallProgress = (beatProgress - 0.2) / 0.8;
+        modulation = 1.3 - fallProgress * 0.3; // Fall from 1.3x to 1.0x
       }
+      
+      channelData[i] *= modulation;
+    }
+  }
+
+  /**
+   * Apply band-pass filter (200-1200 Hz with emphasis 150-300 Hz)
+   */
+  private static applyBandPassFilter(channelData: Float32Array, sampleRate: number): void {
+    // Band-pass filter implementation
+    const lowFreq = 200 / sampleRate;
+    const highFreq = 1200 / sampleRate;
+    const q = 1.5; // Quality factor for emphasis
+    
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    
+    for (let i = 0; i < channelData.length; i++) {
+      const x0 = channelData[i];
+      
+      // Band-pass filter coefficients
+      const w0 = 2 * Math.PI * Math.sqrt(lowFreq * highFreq);
+      const alpha = Math.sin(w0) / (2 * q);
+      const cosw0 = Math.cos(w0);
+      
+      const b0 = alpha;
+      const b1 = 0;
+      const b2 = -alpha;
+      const a0 = 1 + alpha;
+      const a1 = -2 * cosw0;
+      const a2 = 1 - alpha;
+      
+      // Apply filter
+      const y0 = (b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0;
+      
+      channelData[i] = y0;
+      
+      // Update history
+      x2 = x1;
+      x1 = x0;
+      y2 = y1;
+      y1 = y0;
+    }
+  }
+
+  /**
+   * Convert AudioBuffer to WAV format
+   */
+  private static audioBufferToWAV(buffer: AudioBuffer): ArrayBuffer {
+    const length = buffer.length;
+    const numberOfChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const arrayBuffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
+    const view = new DataView(arrayBuffer);
+
+    // WAV header
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + length * numberOfChannels * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numberOfChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+    view.setUint16(32, numberOfChannels * 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, length * numberOfChannels * 2, true);
+
+    // Convert audio data
+    const channelData = buffer.getChannelData(0);
+    let offset = 44;
+    for (let i = 0; i < length; i++) {
+      const sample = Math.max(-1, Math.min(1, channelData[i]));
+      view.setInt16(offset, sample * 0x7FFF, true);
+      offset += 2;
     }
 
-    return buffer;
+    return arrayBuffer;
   }
 }

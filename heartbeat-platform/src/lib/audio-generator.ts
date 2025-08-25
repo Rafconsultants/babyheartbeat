@@ -86,7 +86,7 @@ export class AudioGenerator {
         hasWaveform: true,
         extractedPoints: []
       };
-    } else {
+      } else {
       // Generate fallback waveform data
       console.log('🎵 Generating fallback waveform data');
       return {
