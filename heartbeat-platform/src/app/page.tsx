@@ -179,9 +179,9 @@ export default function Home() {
         duration: 8.0,
         sampleRate: 44100,
         hasDoublePulse: true,
-        doublePulseOffset: 55,
-        timingVariability: 15,
-        amplitudeVariation: 0.1
+        doublePulseOffset: 120, // 120ms between whoomp and lub
+        timingVariability: 20, // ±20ms for organic feel
+        amplitudeVariation: 0.15 // 15% amplitude variation
       };
       
       console.log('🧪 Doppler options:', dopplerOptions);
@@ -238,9 +238,9 @@ export default function Home() {
         duration: 8.0,
         sampleRate: 44100,
         hasDoublePulse: true,
-        doublePulseOffset: 55,
-        timingVariability: 15,
-        amplitudeVariation: 0.1
+        doublePulseOffset: 120, // 120ms between whoomp and lub
+        timingVariability: 20, // ±20ms for organic feel
+        amplitudeVariation: 0.15 // 15% amplitude variation
       };
       
       console.log('🧪 Testing with options:', dopplerOptions);

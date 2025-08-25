@@ -1,6 +1,6 @@
 /**
- * Simple Fetal Doppler Ultrasound Heartbeat Synthesizer
- * Focused on generating realistic audio without complex analysis
+ * Realistic Fetal Doppler Ultrasound Heartbeat Synthesizer
+ * Creates authentic "whoomp-lub" double-pulse patterns with warm, organic background
  */
 
 export interface SimpleDopplerOptions {
@@ -25,10 +25,10 @@ export class SimpleDopplerSynthesizer {
   private static audioContext: AudioContext | null = null;
 
   /**
-   * Generate simple, realistic fetal Doppler ultrasound heartbeat audio
+   * Generate realistic fetal Doppler ultrasound heartbeat audio
    */
   static async generateSimpleDoppler(options: SimpleDopplerOptions): Promise<SimpleDopplerResult> {
-    console.log('🎵 Starting simple Doppler synthesis');
+    console.log('🎵 Starting realistic fetal Doppler synthesis');
     console.log('🎵 Options:', options);
 
     try {
@@ -64,15 +64,15 @@ export class SimpleDopplerSynthesizer {
       const buffer = this.audioContext.createBuffer(1, options.sampleRate * options.duration, options.sampleRate);
       const channelData = buffer.getChannelData(0);
 
-      // Generate simple Doppler heartbeat
-      this.generateSimpleDopplerWaveform(channelData, options);
+      // Generate realistic fetal Doppler heartbeat
+      this.generateRealisticFetalDoppler(channelData, options);
 
       // Convert to WAV and create blob
       const wavBuffer = this.audioBufferToWAV(buffer);
       const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' });
       const audioUrl = URL.createObjectURL(audioBlob);
 
-      console.log('🎵 Simple Doppler synthesis completed');
+      console.log('🎵 Realistic fetal Doppler synthesis completed');
       console.log('🎵 Audio blob size:', audioBlob.size, 'bytes');
       console.log('🎵 Audio URL created:', audioUrl);
 
@@ -85,18 +85,18 @@ export class SimpleDopplerSynthesizer {
       };
 
     } catch (error) {
-      console.error('❌ Simple Doppler synthesis failed:', error);
-      throw new Error(`Failed to generate simple Doppler audio: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('❌ Realistic fetal Doppler synthesis failed:', error);
+      throw new Error(`Failed to generate realistic fetal Doppler audio: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   /**
-   * Generate the simple Doppler waveform
+   * Generate realistic fetal Doppler waveform with "whoomp-lub" pattern
    */
-  private static generateSimpleDopplerWaveform(channelData: Float32Array, options: SimpleDopplerOptions): void {
-    const { bpm, duration, sampleRate, hasDoublePulse = false, doublePulseOffset = 55, timingVariability = 15, amplitudeVariation = 0.1 } = options;
+  private static generateRealisticFetalDoppler(channelData: Float32Array, options: SimpleDopplerOptions): void {
+    const { bpm, duration, sampleRate, hasDoublePulse = true, doublePulseOffset = 120, timingVariability = 20, amplitudeVariation = 0.15 } = options;
 
-    console.log('🎵 Generating simple Doppler waveform...');
+    console.log('🎵 Generating realistic fetal Doppler waveform...');
 
     // Calculate beat timing
     const beatInterval = 60 / bpm; // seconds between beats
@@ -105,73 +105,80 @@ export class SimpleDopplerSynthesizer {
     console.log('🎵 Beat interval:', beatInterval, 'seconds');
     console.log('🎵 Total samples:', totalSamples);
 
+    // Generate continuous warm background first
+    this.generateWarmAmnioticBackground(channelData, sampleRate, duration);
+
     // Generate heartbeat pattern
-    let currentTime = 0.2; // Start first beat at 200ms
+    let currentTime = 0.3; // Start first beat at 300ms
     let beatCount = 0;
 
     while (currentTime < duration) {
-      // Add timing variability
+      // Add timing variability for organic feel
       const timingJitter = (Math.random() - 0.5) * (timingVariability / 1000);
       const actualBeatTime = currentTime + timingJitter;
       
       // Add amplitude variation
       const amplitudeJitter = 1 + (Math.random() - 0.5) * amplitudeVariation;
       
-      // Generate primary beat
-      this.generateSimpleBeat(
+      // Generate "whoomp-lub" double-pulse pattern
+      this.generateWhoompLubPattern(
         channelData,
         actualBeatTime,
         sampleRate,
         amplitudeJitter,
-        true
+        doublePulseOffset
       );
-
-      // Generate secondary beat for double pulse
-      if (hasDoublePulse) {
-        const secondaryTime = actualBeatTime + (doublePulseOffset / 1000);
-        this.generateSimpleBeat(
-          channelData,
-          secondaryTime,
-          sampleRate,
-          amplitudeJitter * 0.6, // 60% of primary amplitude
-          false
-        );
-      }
 
       currentTime += beatInterval;
       beatCount++;
     }
 
-    // Add background noise
-    this.addBackgroundNoise(channelData, sampleRate);
-
-    console.log(`🎵 Generated ${beatCount} beats at ${bpm} BPM`);
+    console.log(`🎵 Generated ${beatCount} "whoomp-lub" patterns at ${bpm} BPM`);
   }
 
   /**
-   * Generate a simple beat
+   * Generate the "whoomp-lub" double-pulse pattern
    */
-  private static generateSimpleBeat(
+  private static generateWhoompLubPattern(
     channelData: Float32Array,
     startTime: number,
     sampleRate: number,
     amplitude: number,
-    isPrimary: boolean
+    doublePulseOffset: number
   ): void {
     const startSample = Math.floor(startTime * sampleRate);
     
     if (startSample >= channelData.length) return;
     
-    // Simple beat parameters
-    const attackTime = 0.008; // 8ms attack
-    const decayTime = 0.080; // 80ms decay
-    const attackSamples = Math.floor(attackTime * sampleRate);
-    const decaySamples = Math.floor(decayTime * sampleRate);
-    const totalSamples = attackSamples + decaySamples;
+    // Generate "whoomp" (primary beat)
+    this.generateWhoompBeat(channelData, startSample, sampleRate, amplitude);
     
-    const maxAmplitude = amplitude * 0.4; // Strong amplitude
+    // Generate "lub" (secondary beat)
+    const lubStartSample = startSample + Math.floor((doublePulseOffset / 1000) * sampleRate);
+    this.generateLubBeat(channelData, lubStartSample, sampleRate, amplitude * 0.7); // 70% of primary amplitude
+  }
 
-    console.log(`🎵 Generating beat: start=${startSample}, attack=${attackSamples}, decay=${decaySamples}, total=${totalSamples}`);
+  /**
+   * Generate the "whoomp" (primary beat)
+   */
+  private static generateWhoompBeat(
+    channelData: Float32Array,
+    startSample: number,
+    sampleRate: number,
+    amplitude: number
+  ): void {
+    // "Whoomp" characteristics: deeper, rounded, longer duration
+    const attackTime = 0.015; // 15ms attack
+    const sustainTime = 0.025; // 25ms sustain
+    const decayTime = 0.120; // 120ms decay
+    const attackSamples = Math.floor(attackTime * sampleRate);
+    const sustainSamples = Math.floor(sustainTime * sampleRate);
+    const decaySamples = Math.floor(decayTime * sampleRate);
+    const totalSamples = attackSamples + sustainSamples + decaySamples;
+    
+    const maxAmplitude = amplitude * 0.6; // Strong but not overwhelming
+
+    console.log(`🎵 Generating "whoomp": start=${startSample}, attack=${attackSamples}, sustain=${sustainSamples}, decay=${decaySamples}, total=${totalSamples}`);
 
     for (let i = 0; i < totalSamples; i++) {
       const sampleIndex = startSample + i;
@@ -182,74 +189,165 @@ export class SimpleDopplerSynthesizer {
       // Calculate envelope
       let envelope = 0;
       if (i < attackSamples) {
-        // Attack: linear rise
-        envelope = i / attackSamples;
+        // Attack: smooth rise
+        envelope = Math.pow(i / attackSamples, 0.7);
+      } else if (i < attackSamples + sustainSamples) {
+        // Sustain: hold
+        envelope = 1.0;
       } else {
-        // Decay: exponential fall
-        const decayTimeInBeat = (i - attackSamples) / sampleRate;
-        envelope = Math.exp(-decayTimeInBeat * 6);
+        // Decay: smooth fall
+        const decayTimeInBeat = (i - attackSamples - sustainSamples) / sampleRate;
+        envelope = Math.exp(-decayTimeInBeat * 4);
       }
 
-      // Generate simple noise burst
-      const noise = this.generateSimpleNoise(timeInBeat);
-      const sample = noise * envelope * maxAmplitude;
+      // Generate "whoomp" sound
+      const whoompSound = this.generateWhoompSound(timeInBeat);
+      const sample = whoompSound * envelope * maxAmplitude;
       
       channelData[sampleIndex] += sample;
     }
   }
 
   /**
-   * Generate simple noise for the beat
+   * Generate the "lub" (secondary beat)
    */
-  private static generateSimpleNoise(time: number): number {
-    let noise = 0;
+  private static generateLubBeat(
+    channelData: Float32Array,
+    startSample: number,
+    sampleRate: number,
+    amplitude: number
+  ): void {
+    // "Lub" characteristics: softer, shorter, higher frequency
+    const attackTime = 0.008; // 8ms attack
+    const decayTime = 0.080; // 80ms decay
+    const attackSamples = Math.floor(attackTime * sampleRate);
+    const decaySamples = Math.floor(decayTime * sampleRate);
+    const totalSamples = attackSamples + decaySamples;
     
-    // Primary thump frequency (200-300 Hz)
-    const thumpFreq = 200 + Math.random() * 100;
-    noise += Math.sin(2 * Math.PI * thumpFreq * time) * 1.0;
-    
-    // Secondary frequency for richness
-    const secondaryFreq = 400 + Math.random() * 200;
-    noise += Math.sin(2 * Math.PI * secondaryFreq * time) * 0.6;
-    
-    // High frequency hiss
-    const hissFreq = 800 + Math.random() * 400;
-    noise += Math.sin(2 * Math.PI * hissFreq * time) * 0.4;
-    
-    // Add broadband noise
-    noise += (Math.random() - 0.5) * 0.5;
-    
-    return noise * 0.8;
+    const maxAmplitude = amplitude * 0.5; // Softer than whoomp
+
+    console.log(`🎵 Generating "lub": start=${startSample}, attack=${attackSamples}, decay=${decaySamples}, total=${totalSamples}`);
+
+    for (let i = 0; i < totalSamples; i++) {
+      const sampleIndex = startSample + i;
+      if (sampleIndex >= channelData.length) break;
+
+      const timeInBeat = i / sampleRate;
+      
+      // Calculate envelope
+      let envelope = 0;
+      if (i < attackSamples) {
+        // Attack: quick rise
+        envelope = i / attackSamples;
+      } else {
+        // Decay: quick fall
+        const decayTimeInBeat = (i - attackSamples) / sampleRate;
+        envelope = Math.exp(-decayTimeInBeat * 8);
+      }
+
+      // Generate "lub" sound
+      const lubSound = this.generateLubSound(timeInBeat);
+      const sample = lubSound * envelope * maxAmplitude;
+      
+      channelData[sampleIndex] += sample;
+    }
   }
 
   /**
-   * Add simple background noise
+   * Generate "whoomp" sound (deeper, rounded)
    */
-  private static addBackgroundNoise(channelData: Float32Array, sampleRate: number): void {
-    console.log('🎵 Adding background noise...');
+  private static generateWhoompSound(time: number): number {
+    let whoomp = 0;
+    
+    // Deep fundamental (120-180 Hz) - the "whoomp" core
+    const fundamentalFreq = 120 + Math.random() * 60;
+    whoomp += Math.sin(2 * Math.PI * fundamentalFreq * time) * 1.0;
+    
+    // Rich harmonics for rounded quality
+    const harmonic1 = fundamentalFreq * 1.5;
+    whoomp += Math.sin(2 * Math.PI * harmonic1 * time) * 0.6;
+    
+    const harmonic2 = fundamentalFreq * 2.2;
+    whoomp += Math.sin(2 * Math.PI * harmonic2 * time) * 0.4;
+    
+    // Low-mid warmth (200-300 Hz)
+    const warmthFreq = 200 + Math.random() * 100;
+    whoomp += Math.sin(2 * Math.PI * warmthFreq * time) * 0.8;
+    
+    // Subtle high frequency for clarity
+    const clarityFreq = 400 + Math.random() * 200;
+    whoomp += Math.sin(2 * Math.PI * clarityFreq * time) * 0.3;
+    
+    // Add broadband noise for organic texture
+    whoomp += (Math.random() - 0.5) * 0.4;
+    
+    return whoomp * 0.7; // Normalize
+  }
+
+  /**
+   * Generate "lub" sound (softer, higher frequency)
+   */
+  private static generateLubSound(time: number): number {
+    let lub = 0;
+    
+    // Higher fundamental (250-350 Hz) - the "lub" character
+    const fundamentalFreq = 250 + Math.random() * 100;
+    lub += Math.sin(2 * Math.PI * fundamentalFreq * time) * 0.8;
+    
+    // Mid harmonics for body
+    const harmonic1 = fundamentalFreq * 1.8;
+    lub += Math.sin(2 * Math.PI * harmonic1 * time) * 0.5;
+    
+    // Higher frequency for "lub" character
+    const lubFreq = 500 + Math.random() * 200;
+    lub += Math.sin(2 * Math.PI * lubFreq * time) * 0.6;
+    
+    // High frequency hiss for Doppler character
+    const hissFreq = 800 + Math.random() * 400;
+    lub += Math.sin(2 * Math.PI * hissFreq * time) * 0.4;
+    
+    // Add broadband noise for texture
+    lub += (Math.random() - 0.5) * 0.3;
+    
+    return lub * 0.6; // Normalize
+  }
+
+  /**
+   * Generate warm, amniotic fluid-like background
+   */
+  private static generateWarmAmnioticBackground(channelData: Float32Array, sampleRate: number, duration: number): void {
+    console.log('🎵 Generating warm amniotic background...');
     
     for (let i = 0; i < channelData.length; i++) {
       const time = i / sampleRate;
       
-      // Simple background noise
+      // Create fluid, wave-like background
       let background = 0;
       
-      // Low frequency warmth
-      const warmFreq = 150 + Math.sin(time * 0.1) * 50;
-      background += Math.sin(2 * Math.PI * warmFreq * time) * 0.02;
+      // Deep, warm foundation (80-120 Hz) - like amniotic fluid
+      const fluidFreq = 80 + Math.sin(time * 0.05) * 40;
+      background += Math.sin(2 * Math.PI * fluidFreq * time) * 0.015;
       
-      // Mid frequency body
-      const bodyFreq = 400 + Math.sin(time * 0.2) * 100;
-      background += Math.sin(2 * Math.PI * bodyFreq * time) * 0.015;
+      // Body tissue resonance (150-250 Hz)
+      const tissueFreq = 150 + Math.sin(time * 0.08) * 100;
+      background += Math.sin(2 * Math.PI * tissueFreq * time) * 0.012;
       
-      // High frequency hiss
-      const hissFreq = 800 + Math.sin(time * 0.3) * 200;
-      background += Math.sin(2 * Math.PI * hissFreq * time) * 0.01;
+      // Mid-frequency warmth (300-500 Hz)
+      const warmthFreq = 300 + Math.sin(time * 0.12) * 200;
+      background += Math.sin(2 * Math.PI * warmthFreq * time) * 0.008;
       
-      // Add broadband noise
-      background += (Math.random() - 0.5) * 0.03;
+      // High-frequency muffled hiss (600-1000 Hz)
+      const hissFreq = 600 + Math.sin(time * 0.15) * 400;
+      background += Math.sin(2 * Math.PI * hissFreq * time) * 0.005;
       
-      channelData[i] += background;
+      // Add very subtle broadband noise for fluid texture
+      background += (Math.random() - 0.5) * 0.008;
+      
+      // Apply gentle modulation for wave-like quality
+      const waveModulation = 1 + Math.sin(time * 0.3) * 0.3;
+      background *= waveModulation;
+      
+      channelData[i] = background;
     }
   }
 
