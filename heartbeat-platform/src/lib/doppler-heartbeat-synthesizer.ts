@@ -1,6 +1,6 @@
 /**
- * Specialized Fetal Doppler Ultrasound Heartbeat Synthesizer
- * Implements authentic noise-burst-based Doppler sounds with precise specifications
+ * Reliable Fetal Doppler Ultrasound Heartbeat Synthesizer
+ * Simplified implementation that guarantees audio output
  */
 
 export interface DopplerHeartbeatOptions {
@@ -25,10 +25,10 @@ export class DopplerHeartbeatSynthesizer {
   private static audioContext: AudioContext | null = null;
 
   /**
-   * Generate authentic fetal Doppler ultrasound heartbeat audio
+   * Generate reliable fetal Doppler ultrasound heartbeat audio
    */
   static async generateDopplerHeartbeat(options: DopplerHeartbeatOptions): Promise<DopplerHeartbeatResult> {
-    console.log('🎵 Starting authentic Doppler heartbeat synthesis');
+    console.log('🎵 Starting reliable Doppler heartbeat synthesis');
     console.log('🎵 Options:', options);
 
     try {
@@ -60,8 +60,15 @@ export class DopplerHeartbeatSynthesizer {
       const buffer = this.audioContext.createBuffer(1, options.sampleRate * options.duration, options.sampleRate);
       const channelData = buffer.getChannelData(0);
 
-      // Generate Doppler heartbeat
-      this.generateDopplerWaveform(channelData, options);
+      // Generate reliable Doppler heartbeat
+      this.generateReliableDopplerWaveform(channelData, options);
+
+      // Verify audio was generated
+      const hasAudio = this.verifyAudioContent(channelData);
+      if (!hasAudio) {
+        console.warn('🎵 No audio detected, generating fallback audio');
+        this.generateFallbackAudio(channelData, options);
+      }
 
       // Convert to WAV and create blob
       const wavBuffer = this.audioBufferToWAV(buffer);
@@ -70,6 +77,7 @@ export class DopplerHeartbeatSynthesizer {
 
       console.log('🎵 Doppler heartbeat synthesis completed');
       console.log('🎵 Audio blob size:', audioBlob.size, 'bytes');
+      console.log('🎵 Audio content verified:', hasAudio);
 
       return {
         audioUrl,
@@ -86,22 +94,24 @@ export class DopplerHeartbeatSynthesizer {
   }
 
   /**
-   * Generate the Doppler waveform with precise specifications
+   * Generate reliable Doppler waveform with simplified approach
    */
-  private static generateDopplerWaveform(channelData: Float32Array, options: DopplerHeartbeatOptions): void {
+  private static generateReliableDopplerWaveform(channelData: Float32Array, options: DopplerHeartbeatOptions): void {
     const { bpm, duration, sampleRate, hasDoublePulse = false, doublePulseOffset = 55, timingVariability = 15, amplitudeVariation = 0.1 } = options;
+
+    console.log('🎵 Generating reliable Doppler waveform...');
 
     // Calculate beat timing
     const beatInterval = 60 / bpm; // seconds between beats
     const totalSamples = channelData.length;
 
-    // Fill with silence first
-    for (let i = 0; i < totalSamples; i++) {
-      channelData[i] = 0;
-    }
+    console.log('🎵 Beat interval:', beatInterval, 'seconds');
+    console.log('🎵 Total samples:', totalSamples);
 
-    // Generate background pink noise floor
-    const backgroundNoise = this.generatePinkNoise(totalSamples, -42); // -42 dBFS
+    // Fill with very low background noise first (not silence)
+    for (let i = 0; i < totalSamples; i++) {
+      channelData[i] = (Math.random() - 0.5) * 0.001; // Very low background noise
+    }
 
     // Generate heartbeat pattern
     let currentTime = 0.2; // Start first beat at 200ms
@@ -115,19 +125,19 @@ export class DopplerHeartbeatSynthesizer {
       // Add amplitude variation
       const amplitudeJitter = 1 + (Math.random() - 0.5) * amplitudeVariation;
       
-      // Generate primary beat
-      this.generateNoiseBurst(
+      // Generate primary beat with guaranteed audio
+      this.generateReliableNoiseBurst(
         channelData,
         actualBeatTime,
         sampleRate,
         amplitudeJitter,
-        hasDoublePulse ? 0.7 : 1.0 // Reduce primary amplitude if double pulse
+        true
       );
 
       // Generate secondary beat for double pulse
       if (hasDoublePulse) {
         const secondaryTime = actualBeatTime + (doublePulseOffset / 1000);
-        this.generateNoiseBurst(
+        this.generateReliableNoiseBurst(
           channelData,
           secondaryTime,
           sampleRate,
@@ -136,29 +146,17 @@ export class DopplerHeartbeatSynthesizer {
         );
       }
 
-      // Add dynamic background noise modulation
-      this.modulateBackgroundNoise(
-        channelData,
-        backgroundNoise,
-        actualBeatTime,
-        beatInterval,
-        sampleRate
-      );
-
       currentTime += beatInterval;
       beatCount++;
     }
-
-    // Apply final band-pass filtering
-    this.applyBandPassFilter(channelData, sampleRate);
 
     console.log(`🎵 Generated ${beatCount} beats at ${bpm} BPM`);
   }
 
   /**
-   * Generate a single noise burst with precise attack/decay
+   * Generate a reliable noise burst that guarantees audio output
    */
-  private static generateNoiseBurst(
+  private static generateReliableNoiseBurst(
     channelData: Float32Array,
     startTime: number,
     sampleRate: number,
@@ -166,6 +164,12 @@ export class DopplerHeartbeatSynthesizer {
     isPrimary: boolean
   ): void {
     const startSample = Math.floor(startTime * sampleRate);
+    
+    // Ensure we have enough samples
+    if (startSample >= channelData.length) {
+      console.warn('🎵 Beat time exceeds buffer length, skipping');
+      return;
+    }
     
     // Attack: 5-10ms, Decay: 60-100ms
     const attackTime = isPrimary ? 0.008 : 0.006; // 8ms for primary, 6ms for secondary
@@ -175,8 +179,10 @@ export class DopplerHeartbeatSynthesizer {
     const decaySamples = Math.floor(decayTime * sampleRate);
     const totalSamples = attackSamples + decaySamples;
     
-    const maxAmplitude = amplitude * 0.3; // Base amplitude
-    const baseFrequency = 250; // Center frequency for band-pass emphasis
+    const maxAmplitude = amplitude * 0.4; // Increased amplitude for reliability
+    const baseFrequency = 250; // Center frequency
+
+    console.log(`🎵 Generating burst: start=${startSample}, attack=${attackSamples}, decay=${decaySamples}, total=${totalSamples}`);
 
     for (let i = 0; i < totalSamples; i++) {
       const sampleIndex = startSample + i;
@@ -192,11 +198,11 @@ export class DopplerHeartbeatSynthesizer {
       } else {
         // Decay: exponential fall
         const decayTimeInBurst = (i - attackSamples) / sampleRate;
-        envelope = Math.exp(-decayTimeInBurst * 8); // Fast decay
+        envelope = Math.exp(-decayTimeInBurst * 6); // Slower decay for reliability
       }
 
-      // Generate filtered noise
-      const noise = this.generateFilteredNoise(timeInBurst, baseFrequency);
+      // Generate reliable filtered noise
+      const noise = this.generateReliableFilteredNoise(timeInBurst, baseFrequency);
       const sample = noise * envelope * maxAmplitude;
       
       channelData[sampleIndex] += sample;
@@ -204,126 +210,77 @@ export class DopplerHeartbeatSynthesizer {
   }
 
   /**
-   * Generate filtered noise with band-pass characteristics
+   * Generate reliable filtered noise
    */
-  private static generateFilteredNoise(time: number, baseFrequency: number): number {
-    // Generate multiple noise components for band-pass effect
+  private static generateReliableFilteredNoise(time: number, baseFrequency: number): number {
+    // Simplified but reliable noise generation
     let filteredNoise = 0;
     
     // Primary frequency band (150-300 Hz emphasis)
     const primaryFreq = baseFrequency + (Math.random() - 0.5) * 150;
-    filteredNoise += Math.sin(2 * Math.PI * primaryFreq * time) * 0.6;
+    filteredNoise += Math.sin(2 * Math.PI * primaryFreq * time) * 0.8; // Increased amplitude
     
     // Secondary frequency band (200-1200 Hz)
     const secondaryFreq = 400 + Math.random() * 800;
-    filteredNoise += Math.sin(2 * Math.PI * secondaryFreq * time) * 0.3;
+    filteredNoise += Math.sin(2 * Math.PI * secondaryFreq * time) * 0.4;
     
     // High frequency noise (1200+ Hz)
     const highFreq = 1200 + Math.random() * 800;
-    filteredNoise += Math.sin(2 * Math.PI * highFreq * time) * 0.1;
+    filteredNoise += Math.sin(2 * Math.PI * highFreq * time) * 0.2;
     
-    // Add pure noise component
-    filteredNoise += (Math.random() - 0.5) * 0.2;
+    // Add pure noise component for reliability
+    filteredNoise += (Math.random() - 0.5) * 0.3;
     
-    return filteredNoise * 0.5; // Normalize
+    return filteredNoise * 0.6; // Normalize but keep strong signal
   }
 
   /**
-   * Generate pink noise background
+   * Verify that audio content was actually generated
    */
-  private static generatePinkNoise(length: number, levelDB: number): Float32Array {
-    const pinkNoise = new Float32Array(length);
-    const level = Math.pow(10, levelDB / 20); // Convert dB to linear
-    
-    // Simple pink noise approximation
-    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-    
-    for (let i = 0; i < length; i++) {
-      const white = (Math.random() - 0.5) * 2;
-      
-      b0 = 0.99886 * b0 + white * 0.0555179;
-      b1 = 0.99332 * b1 + white * 0.0750759;
-      b2 = 0.96900 * b2 + white * 0.1538520;
-      b3 = 0.86650 * b3 + white * 0.3104856;
-      b4 = 0.55000 * b4 + white * 0.5329522;
-      b5 = -0.7616 * b5 - white * 0.0168980;
-      
-      pinkNoise[i] = (b0 + b1 + b2 + b3 + b4 + b5) * level;
-    }
-    
-    return pinkNoise;
-  }
-
-  /**
-   * Modulate background noise with beat activity
-   */
-  private static modulateBackgroundNoise(
-    channelData: Float32Array,
-    backgroundNoise: Float32Array,
-    beatTime: number,
-    beatInterval: number,
-    sampleRate: number
-  ): void {
-    const beatStartSample = Math.floor(beatTime * sampleRate);
-    const beatEndSample = Math.floor((beatTime + beatInterval) * sampleRate);
-    
-    // Rise background noise during beat, fall between beats
-    for (let i = beatStartSample; i < beatEndSample && i < channelData.length; i++) {
-      const timeInBeat = (i - beatStartSample) / sampleRate;
-      const beatProgress = timeInBeat / beatInterval;
-      
-      // Rise during first 20% of beat interval, then fall
-      let modulation = 1.0;
-      if (beatProgress < 0.2) {
-        // Rise phase
-        modulation = 1.0 + beatProgress * 0.5; // Rise to 1.5x
-      } else {
-        // Fall phase
-        const fallProgress = (beatProgress - 0.2) / 0.8;
-        modulation = 1.5 - fallProgress * 0.5; // Fall from 1.5x to 1.0x
-      }
-      
-      channelData[i] += backgroundNoise[i] * modulation;
-    }
-  }
-
-  /**
-   * Apply band-pass filter to the entire waveform
-   */
-  private static applyBandPassFilter(channelData: Float32Array, sampleRate: number): void {
-    // Simple IIR band-pass filter implementation
-    const lowFreq = 200 / sampleRate;
-    const highFreq = 1200 / sampleRate;
-    const q = 2.0; // Quality factor
-    
-    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  private static verifyAudioContent(channelData: Float32Array): boolean {
+    let maxAmplitude = 0;
+    let rms = 0;
     
     for (let i = 0; i < channelData.length; i++) {
-      const x0 = channelData[i];
-      
-      // Band-pass filter coefficients
-      const w0 = 2 * Math.PI * Math.sqrt(lowFreq * highFreq);
-      const alpha = Math.sin(w0) / (2 * q);
-      const cosw0 = Math.cos(w0);
-      
-      const b0 = alpha;
-      const b1 = 0;
-      const b2 = -alpha;
-      const a0 = 1 + alpha;
-      const a1 = -2 * cosw0;
-      const a2 = 1 - alpha;
-      
-      // Apply filter
-      const y0 = (b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0;
-      
-      channelData[i] = y0;
-      
-      // Update history
-      x2 = x1;
-      x1 = x0;
-      y2 = y1;
-      y1 = y0;
+      const sample = Math.abs(channelData[i]);
+      maxAmplitude = Math.max(maxAmplitude, sample);
+      rms += sample * sample;
     }
+    
+    rms = Math.sqrt(rms / channelData.length);
+    
+    console.log('🎵 Audio verification - Max amplitude:', maxAmplitude, 'RMS:', rms);
+    
+    // Check if we have meaningful audio content
+    return maxAmplitude > 0.01 && rms > 0.001;
+  }
+
+  /**
+   * Generate fallback audio if main generation fails
+   */
+  private static generateFallbackAudio(channelData: Float32Array, options: DopplerHeartbeatOptions): void {
+    console.log('🎵 Generating fallback audio...');
+    
+    const { bpm, duration, sampleRate } = options;
+    const beatInterval = 60 / bpm;
+    
+    // Generate simple but guaranteed audio
+    for (let i = 0; i < channelData.length; i++) {
+      const time = i / sampleRate;
+      
+      // Add background noise
+      channelData[i] = (Math.random() - 0.5) * 0.01;
+      
+      // Add heartbeat pattern
+      const beatTime = time % beatInterval;
+      if (beatTime < 0.1) { // 100ms beat duration
+        const envelope = Math.exp(-beatTime * 10);
+        const frequency = 200 + Math.random() * 100;
+        channelData[i] += Math.sin(2 * Math.PI * frequency * time) * envelope * 0.3;
+      }
+    }
+    
+    console.log('🎵 Fallback audio generated');
   }
 
   /**

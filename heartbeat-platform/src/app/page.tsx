@@ -230,6 +230,59 @@ export default function Home() {
     }
   };
 
+  // Simple test function to verify Doppler synthesizer works
+  const testDopplerSynthesizer = async () => {
+    console.log('🧪 Testing Doppler synthesizer directly...');
+    
+    try {
+      const dopplerOptions = {
+        bpm: 155,
+        duration: 8.0,
+        sampleRate: 44100,
+        hasDoublePulse: true,
+        doublePulseOffset: 55,
+        timingVariability: 15,
+        amplitudeVariation: 0.1
+      };
+      
+      console.log('🧪 Testing with options:', dopplerOptions);
+      
+      const dopplerResult = await DopplerHeartbeatSynthesizer.generateDopplerHeartbeat(dopplerOptions);
+      
+      console.log('🧪 Doppler test successful:', dopplerResult);
+      
+      // Create result for display
+      const testResult: AudioGenerationResponse = {
+        audioUrl: dopplerResult.audioUrl,
+        bpm: dopplerResult.bpm,
+        isWatermarked: false,
+        confidence: 0.9,
+        method: 'gpt-vision',
+        source: 'Direct Doppler synthesizer test',
+        analysis: 'Test audio generated successfully'
+      };
+      
+      setResult(testResult);
+      setProcessingState({
+        isProcessing: false,
+        step: 'complete',
+        progress: 100
+      });
+      
+      console.log('🧪 Doppler synthesizer test completed successfully!');
+      
+    } catch (error) {
+      console.error('🧪 Doppler synthesizer test failed:', error);
+      setError(`Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setProcessingState({
+        isProcessing: false,
+        step: 'error',
+        progress: 0,
+        error: `Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  };
+
   // Helper function to create a simple WAV file
   const createSimpleWAVFile = (audioBuffer: AudioBuffer): ArrayBuffer => {
     const length = audioBuffer.length;
@@ -586,6 +639,12 @@ export default function Home() {
                     className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
                   >
                     🧪 Test System Functionality
+                  </button>
+                  <button
+                    onClick={testDopplerSynthesizer}
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 ml-2"
+                  >
+                    🎵 Test Doppler Synthesizer
                   </button>
                   <p className="text-xs text-gray-500">Check browser console for test results</p>
                 </div>
