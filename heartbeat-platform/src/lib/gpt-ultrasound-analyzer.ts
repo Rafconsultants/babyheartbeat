@@ -87,13 +87,22 @@ export class GPTUltrasoundAnalyzer {
   /**
    * Get fallback GPT result when API fails
    */
-  private static getFallbackGPTResult(): Partial<UltrasoundAnalysis> {
+  private static getFallbackGPTResult(): { bpm: number; confidence: number; analysis: string; beatTimesSec: number[]; doublePulseOffsetMs: number | null; amplitudeScalars: number[] } {
+    // Generate uniform beat timing for fallback
+    const bpm = 140;
+    const beatInterval = 60 / bpm;
+    const startTime = 0.12;
+    const beatTimes: number[] = [];
+    for (let time = startTime; time < 8.0; time += beatInterval) {
+      beatTimes.push(Number(time.toFixed(3)));
+    }
+
     return {
-      bpm: 140,
+      bpm,
       confidence: 0.3,
-      beat_times_sec: [],
-      double_pulse_offset_ms: null,
-      amplitude_scalars: [],
+      beatTimesSec: beatTimes,
+      doublePulseOffsetMs: null,
+      amplitudeScalars: beatTimes.map(() => 0.8),
       analysis: 'GPT analysis failed - using fallback'
     };
   }
@@ -133,7 +142,7 @@ export class GPTUltrasoundAnalyzer {
   /**
    * Analyze image with GPT-4 Vision API
    */
-  private static async analyzeWithGPT(imageFile: File): Promise<Partial<UltrasoundAnalysis>> {
+  private static async analyzeWithGPT(imageFile: File): Promise<{ bpm: number; confidence: number; analysis: string; beatTimesSec: number[]; doublePulseOffsetMs: number | null; amplitudeScalars: number[] }> {
     const base64Image = await this.fileToBase64(imageFile);
     console.log('🔍 Image converted to base64, length:', base64Image.length);
 
@@ -235,7 +244,7 @@ Return only valid JSON. No prose.`;
   /**
    * Combine GPT results with waveform data
    */
-  private static combineResults(gptResult: Partial<UltrasoundAnalysis>, waveformResult: ImageAnalysisResult): UltrasoundAnalysis {
+  private static combineResults(gptResult: { bpm: number; confidence: number; analysis: string; beatTimesSec: number[]; doublePulseOffsetMs: number | null; amplitudeScalars: number[] }, waveformResult: ImageAnalysisResult): UltrasoundAnalysis {
     const { waveformData } = waveformResult;
     
     // Use GPT BPM if available and waveform BPM if not
@@ -244,7 +253,7 @@ Return only valid JSON. No prose.`;
     // Use waveform beat times if available, otherwise use GPT or generate uniform
     let beatTimes = waveformData.beatTimes.length > 0 ? 
       waveformData.beatTimes.map(time => Number(time.toFixed(3))) : 
-      gptResult.beat_times_sec || [];
+      gptResult.beatTimesSec || [];
     
     if (beatTimes.length === 0) {
       // Generate uniform beat timing
@@ -259,14 +268,14 @@ Return only valid JSON. No prose.`;
     // Use waveform amplitudes if available, otherwise use GPT or default
     let amplitudeScalars = waveformData.amplitudes.length > 0 ? 
       waveformData.amplitudes.map(amp => Math.max(0, Math.min(1, amp))) : 
-      gptResult.amplitude_scalars || [];
+      gptResult.amplitudeScalars || [];
     
     if (amplitudeScalars.length !== beatTimes.length) {
       amplitudeScalars = beatTimes.map(() => 0.8);
     }
     
     // Use GPT double pulse offset if available
-    const doublePulseOffset = gptResult.double_pulse_offset_ms || null;
+    const doublePulseOffset = gptResult.doublePulseOffsetMs || null;
     
     // Calculate combined confidence
     const gptConfidence = gptResult.confidence || 0.5;
@@ -288,7 +297,7 @@ Return only valid JSON. No prose.`;
   /**
    * Validate and enhance the GPT analysis with reasonable defaults
    */
-  private static validateGPTResult(result: Record<string, unknown>): Partial<UltrasoundAnalysis> {
+  private static validateGPTResult(result: Record<string, unknown>): { bpm: number; confidence: number; analysis: string; beatTimesSec: number[]; doublePulseOffsetMs: number | null; amplitudeScalars: number[] } {
     const bpm = this.validateBPM((result.bpm as number) || 140);
     const confidence = Math.max(0, Math.min(1, (result.confidence as number) || 0.5));
     
@@ -325,9 +334,9 @@ Return only valid JSON. No prose.`;
     return {
       bpm,
       confidence,
-      beat_times_sec: beatTimes,
-      double_pulse_offset_ms: validatedOffset,
-      amplitude_scalars: amplitudeScalars,
+      beatTimesSec: beatTimes,
+      doublePulseOffsetMs: validatedOffset,
+      amplitudeScalars: amplitudeScalars,
       analysis: (result.analysis as string) || 'GPT-4 Vision analysis completed'
     };
   }
@@ -335,7 +344,7 @@ Return only valid JSON. No prose.`;
   /**
    * Extract BPM and basic info from text if JSON parsing fails
    */
-  private static extractFromText(content: string): Partial<UltrasoundAnalysis> {
+  private static extractFromText(content: string): { bpm: number; confidence: number; analysis: string; beatTimesSec: number[]; doublePulseOffsetMs: number | null; amplitudeScalars: number[] } {
     const bpmMatch = content.match(/(\d{3})\s*(?:BPM|bpm|beats?)/i);
     const bpm = this.validateBPM(bpmMatch ? parseInt(bpmMatch[1]) : 140);
     
@@ -350,9 +359,9 @@ Return only valid JSON. No prose.`;
     return {
       bpm,
       confidence: 0.6,
-      beat_times_sec: beatTimes,
-      double_pulse_offset_ms: null,
-      amplitude_scalars: beatTimes.map(() => 0.8),
+      beatTimesSec: beatTimes,
+      doublePulseOffsetMs: null,
+      amplitudeScalars: beatTimes.map(() => 0.8),
       analysis: content
     };
   }

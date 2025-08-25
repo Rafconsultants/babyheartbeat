@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { AudioGenerationResponse, ProcessingState } from '@/types'
 import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer'
-import { WhoompLubDopplerSynthesizer } from '@/lib/whoomp-lub-doppler'
+import { NoiseBurstDopplerSynthesizer } from '@/lib/noise-burst-doppler'
 import ImageUpload from '@/components/ImageUpload'
 
 export default function Home() {
@@ -40,17 +40,18 @@ export default function Home() {
         progress: 75
       });
 
-      // Step 2: Generate whoomp-lub fetal Doppler audio
-      console.log('🎵 Generating whoomp-lub fetal Doppler audio...');
+      // Step 2: Generate noise-burst fetal Doppler audio
+      console.log('🎵 Generating noise-burst fetal Doppler audio...');
       const dopplerOptions = {
         bpm: analysis.bpm,
         duration: 8.0,
         sampleRate: 44100,
-        timingVariability: 12,
-        amplitudeVariation: 0.10
+        beatTimesSec: analysis.beat_times_sec || [],
+        doublePulseOffsetMs: analysis.double_pulse_offset_ms,
+        amplitudeScalars: analysis.amplitude_scalars || []
       };
 
-      const dopplerResult = await WhoompLubDopplerSynthesizer.generateWhoompLubDoppler(dopplerOptions);
+      const dopplerResult = await NoiseBurstDopplerSynthesizer.generateNoiseBurstDoppler(dopplerOptions);
       console.log('🎵 Audio generation successful:', dopplerResult);
 
       // Create result
@@ -59,7 +60,7 @@ export default function Home() {
         bpm: dopplerResult.bpm,
         isWatermarked: false,
         confidence: analysis.confidence,
-        method: 'whoomp-lub-doppler',
+        method: 'noise-burst-doppler',
         source: 'Ultrasound image analysis',
         analysis: analysis.analysis
       };
