@@ -9,7 +9,7 @@ import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer' // Updated
 import { AudioGenerator } from '@/lib/audio-generator' // Updated import
 import { ReferenceAudioLoader, ReferenceAudioInfo } from '@/lib/reference-audio-loader' // Reference audio support
 import { testOpenAIAPI } from '@/lib/api-test' // Add API test import
-import { DopplerHeartbeatSynthesizer } from '@/lib/doppler-heartbeat-synthesizer' // New specialized synthesizer
+import { AuthenticDopplerSynthesizer } from '@/lib/authentic-doppler-synthesizer' // Comprehensive authentic Doppler synthesizer
 
 export default function Home() {
   const [processingState, setProcessingState] = useState<ProcessingState>({
@@ -183,12 +183,14 @@ export default function Home() {
         hasDoublePulse: true, // Enable double-pulse for realism
         doublePulseOffset: 55, // 55ms between primary and secondary pulse
         timingVariability: 15, // ±15ms timing variation
-        amplitudeVariation: 0.1 // 10% amplitude variation
+        amplitudeVariation: 0.1, // 10% amplitude variation
+        stereo: true,
+        useReverb: true
       };
       
       console.log('🧪 Doppler options:', dopplerOptions);
       
-      const dopplerResult = await DopplerHeartbeatSynthesizer.generateDopplerHeartbeat(dopplerOptions);
+      const dopplerResult = await AuthenticDopplerSynthesizer.generateAuthenticDoppler(dopplerOptions);
       
       console.log('🧪 Doppler heartbeat generation successful:', dopplerResult);
       console.log('🧪 Audio blob size:', dopplerResult.fileSize, 'bytes');
@@ -232,7 +234,7 @@ export default function Home() {
 
   // Simple test function to verify Doppler synthesizer works
   const testDopplerSynthesizer = async () => {
-    console.log('🧪 Testing Doppler synthesizer directly...');
+    console.log('🧪 Testing authentic Doppler synthesizer directly...');
     
     try {
       const dopplerOptions = {
@@ -242,14 +244,16 @@ export default function Home() {
         hasDoublePulse: true,
         doublePulseOffset: 55,
         timingVariability: 15,
-        amplitudeVariation: 0.1
+        amplitudeVariation: 0.1,
+        stereo: true,
+        useReverb: true
       };
       
       console.log('🧪 Testing with options:', dopplerOptions);
       
-      const dopplerResult = await DopplerHeartbeatSynthesizer.generateDopplerHeartbeat(dopplerOptions);
+      const dopplerResult = await AuthenticDopplerSynthesizer.generateAuthenticDoppler(dopplerOptions);
       
-      console.log('🧪 Doppler test successful:', dopplerResult);
+      console.log('🧪 Authentic Doppler test successful:', dopplerResult);
       
       // Create result for display
       const testResult: AudioGenerationResponse = {
@@ -258,8 +262,8 @@ export default function Home() {
         isWatermarked: false,
         confidence: 0.9,
         method: 'gpt-vision',
-        source: 'Direct Doppler synthesizer test',
-        analysis: 'Test audio generated successfully'
+        source: 'Direct authentic Doppler synthesizer test',
+        analysis: 'Authentic fetal Doppler ultrasound test audio generated successfully'
       };
       
       setResult(testResult);
@@ -269,16 +273,16 @@ export default function Home() {
         progress: 100
       });
       
-      console.log('🧪 Doppler synthesizer test completed successfully!');
+      console.log('🧪 Authentic Doppler synthesizer test completed successfully!');
       
     } catch (error) {
-      console.error('🧪 Doppler synthesizer test failed:', error);
-      setError(`Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('🧪 Authentic Doppler synthesizer test failed:', error);
+      setError(`Authentic Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setProcessingState({
         isProcessing: false,
         step: 'error',
         progress: 0,
-        error: `Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        error: `Authentic Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
   };
