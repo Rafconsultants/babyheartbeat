@@ -10,6 +10,8 @@ import { AudioGenerator } from '@/lib/audio-generator' // Updated import
 import { ReferenceAudioLoader, ReferenceAudioInfo } from '@/lib/reference-audio-loader' // Reference audio support
 import { testOpenAIAPI } from '@/lib/api-test' // Add API test import
 import { SimpleDopplerSynthesizer } from '@/lib/simple-doppler-synthesizer' // Simple, focused Doppler synthesizer
+import { EnhancedAudioGenerator } from '@/lib/enhanced-audio-generator' // Enhanced audio generator with waveform extraction
+import { EnhancedWaveformExtractor } from '@/lib/enhanced-waveform-extractor' // Enhanced waveform extractor
 
 export default function Home() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -175,39 +177,68 @@ export default function Home() {
       
       console.log('🧪 Using BPM:', bpm);
       
-      // Test 2: Generate authentic Doppler heartbeat audio
-      console.log('🧪 Step 2: Generating authentic Doppler heartbeat...');
+      // Test 2: Extract waveform and generate enhanced Doppler heartbeat
+      console.log('🧪 Step 2: Extracting waveform and generating enhanced Doppler heartbeat...');
       
-      const dopplerOptions = {
+      // Extract waveform from image
+      let waveformData = null;
+      try {
+        const extractedWaveform = await EnhancedWaveformExtractor.extractWaveformFromImage(file);
+        if (EnhancedWaveformExtractor.validateWaveform(extractedWaveform)) {
+          waveformData = {
+            peaks: extractedWaveform.peaks,
+            amplitudes: extractedWaveform.amplitudes,
+            timing: extractedWaveform.timing,
+            doublePulseOffsets: extractedWaveform.doublePulseOffsets,
+            confidence: extractedWaveform.confidence,
+            extracted: extractedWaveform.extracted
+          };
+          console.log('🧪 Waveform extraction successful:', extractedWaveform);
+          bpm = extractedWaveform.bpm;
+          confidence = extractedWaveform.confidence;
+          analysis = `Waveform extracted: ${extractedWaveform.peaks.length} peaks, BPM: ${extractedWaveform.bpm}, Confidence: ${(extractedWaveform.confidence * 100).toFixed(1)}%`;
+        } else {
+          console.log('🧪 Waveform extraction failed, using fallback pattern');
+          analysis = 'Waveform extraction failed - using fallback pattern with natural variation';
+        }
+      } catch (waveformError) {
+        console.warn('🧪 Waveform extraction error, using fallback:', waveformError);
+        analysis = 'Waveform extraction error - using fallback pattern with natural variation';
+      }
+      
+      const enhancedOptions = {
         bpm: bpm,
         duration: 8.0,
         sampleRate: 44100,
+        waveformData: waveformData || undefined,
         hasDoublePulse: true,
-        doublePulseOffset: 120, // 120ms between whoomp and lub
         timingVariability: 20, // ±20ms for organic feel
-        amplitudeVariation: 0.15 // 15% amplitude variation
+        amplitudeVariation: 0.15, // 15% amplitude variation
+        stereo: true, // Enable stereo rendering
+        wallFiltering: true, // Enable wall-filtering
+        spatialReverb: true // Enable spatial reverb
       };
       
-      console.log('🧪 Doppler options:', dopplerOptions);
+      console.log('🧪 Enhanced Doppler options:', enhancedOptions);
       
-      const dopplerResult = await SimpleDopplerSynthesizer.generateSimpleDoppler(dopplerOptions);
+      const enhancedResult = await EnhancedAudioGenerator.generateEnhancedDoppler(enhancedOptions);
       
-      console.log('🧪 Doppler heartbeat generation successful:', dopplerResult);
-      console.log('🧪 Audio blob size:', dopplerResult.fileSize, 'bytes');
+      console.log('🧪 Enhanced Doppler heartbeat generation successful:', enhancedResult);
+      console.log('🧪 Audio blob size:', enhancedResult.fileSize, 'bytes');
 
       // Create result
-      const simpleResult: AudioGenerationResponse = {
-        audioUrl: dopplerResult.audioUrl,
-        bpm: dopplerResult.bpm,
+      const enhancedResultResponse: AudioGenerationResponse = {
+        audioUrl: enhancedResult.audioUrl,
+        bpm: enhancedResult.bpm,
         isWatermarked: false,
         confidence: confidence,
-        method: 'simple-doppler',
-        source: 'Simple Doppler heartbeat synthesis',
+        method: 'enhanced-doppler',
+        source: 'Enhanced Doppler heartbeat synthesis with waveform extraction',
         analysis: analysis
       };
       
-      console.log('🧪 Authentic Doppler result created:', simpleResult);
-      setResult(simpleResult);
+      console.log('🧪 Enhanced Doppler result created:', enhancedResultResponse);
+      setResult(enhancedResultResponse);
       setProcessingState({
         isProcessing: false,
         step: 'complete',
@@ -232,36 +263,38 @@ export default function Home() {
     }
   };
 
-  // Simple test function to verify Doppler synthesizer works
+  // Enhanced test function to verify enhanced Doppler synthesizer works
   const testDopplerSynthesizer = async () => {
-    console.log('🧪 Testing simple Doppler synthesizer directly...');
+    console.log('🧪 Testing enhanced Doppler synthesizer directly...');
     
     try {
-      const dopplerOptions = {
+      const enhancedOptions = {
         bpm: 155,
         duration: 8.0,
         sampleRate: 44100,
         hasDoublePulse: true,
-        doublePulseOffset: 120, // 120ms between whoomp and lub
         timingVariability: 20, // ±20ms for organic feel
-        amplitudeVariation: 0.15 // 15% amplitude variation
+        amplitudeVariation: 0.15, // 15% amplitude variation
+        stereo: true, // Enable stereo rendering
+        wallFiltering: true, // Enable wall-filtering
+        spatialReverb: true // Enable spatial reverb
       };
       
-      console.log('🧪 Testing with options:', dopplerOptions);
+      console.log('🧪 Testing with enhanced options:', enhancedOptions);
       
-      const dopplerResult = await SimpleDopplerSynthesizer.generateSimpleDoppler(dopplerOptions);
+      const enhancedResult = await EnhancedAudioGenerator.generateEnhancedDoppler(enhancedOptions);
       
-      console.log('🧪 Simple Doppler test successful:', dopplerResult);
+      console.log('🧪 Enhanced Doppler test successful:', enhancedResult);
       
       // Create result for display
       const testResult: AudioGenerationResponse = {
-        audioUrl: dopplerResult.audioUrl,
-        bpm: dopplerResult.bpm,
+        audioUrl: enhancedResult.audioUrl,
+        bpm: enhancedResult.bpm,
         isWatermarked: false,
-        confidence: 0.9,
-        method: 'simple-doppler',
-        source: 'Direct simple Doppler synthesizer test',
-        analysis: 'Simple fetal Doppler ultrasound test audio generated successfully'
+        confidence: 0.95,
+        method: 'enhanced-doppler',
+        source: 'Direct enhanced Doppler synthesizer test',
+        analysis: `Enhanced fetal Doppler ultrasound test audio generated successfully. Features: ${enhancedResult.stereo ? 'Stereo' : 'Mono'}, ${enhancedResult.waveformExtracted ? 'Waveform extracted' : 'Fallback pattern'}, ${enhancedResult.hasDoublePulse ? 'Double-pulse enabled' : 'Single-pulse'}`
       };
       
       setResult(testResult);
@@ -271,16 +304,16 @@ export default function Home() {
         progress: 100
       });
       
-      console.log('🧪 Simple Doppler synthesizer test completed successfully!');
+      console.log('🧪 Enhanced Doppler synthesizer test completed successfully!');
       
     } catch (error) {
-      console.error('🧪 Simple Doppler synthesizer test failed:', error);
-      setError(`Simple Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('🧪 Enhanced Doppler synthesizer test failed:', error);
+      setError(`Enhanced Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setProcessingState({
         isProcessing: false,
         step: 'error',
         progress: 0,
-        error: `Simple Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        error: `Enhanced Doppler synthesizer test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
   };
