@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { AudioGenerationResponse, ProcessingState } from '@/types'
 import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer'
-import { SimpleDopplerSynthesizer } from '@/lib/simple-doppler-synthesizer'
+import { RealisticFetalDopplerSynthesizer } from '@/lib/realistic-fetal-doppler'
 import ImageUpload from '@/components/ImageUpload'
 
 export default function Home() {
@@ -41,18 +41,17 @@ export default function Home() {
       });
 
       // Step 2: Generate realistic fetal Doppler audio
-      console.log('🎵 Generating fetal Doppler audio...');
+      console.log('🎵 Generating realistic fetal Doppler audio...');
       const dopplerOptions = {
         bpm: analysis.bpm,
         duration: 8.0,
         sampleRate: 44100,
         hasDoublePulse: true,
-        doublePulseOffset: 120,
-        timingVariability: 20,
-        amplitudeVariation: 0.15
+        timingVariability: 15,
+        amplitudeVariation: 0.12
       };
 
-      const dopplerResult = await SimpleDopplerSynthesizer.generateSimpleDoppler(dopplerOptions);
+      const dopplerResult = await RealisticFetalDopplerSynthesizer.generateRealisticFetalDoppler(dopplerOptions);
       console.log('🎵 Audio generation successful:', dopplerResult);
 
       // Create result
@@ -61,7 +60,7 @@ export default function Home() {
         bpm: dopplerResult.bpm,
         isWatermarked: false,
         confidence: analysis.confidence,
-        method: 'gpt-vision',
+        method: 'realistic-fetal-doppler',
         source: 'Ultrasound image analysis',
         analysis: analysis.analysis
       };
