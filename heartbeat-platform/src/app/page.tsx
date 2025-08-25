@@ -20,10 +20,9 @@ export default function Home() {
     step: 'uploading',
     progress: 0
   });
+  const [manualBpm, setManualBpm] = useState<string>('155');
   const [isTestMode, setIsTestMode] = useState(false);
-  const [testModeType, setTestModeType] = useState<'analysis' | 'simple-audio' | 'full'>('analysis');
-  const [manualBPM, setManualBPM] = useState(155);
-  const [useManualBPM, setUseManualBPM] = useState(false);
+  const [testModeType, setTestModeType] = useState<'analysis' | 'simple' | 'full'>('full');
 
   // Check API status on component mount
   useEffect(() => {
@@ -150,11 +149,11 @@ export default function Home() {
     try {
       // Test 1: Analyze the image (or use manual BPM)
       console.log('🧪 Step 1: Getting BPM...');
-      let bpm = manualBPM;
+      let bpm = parseInt(manualBpm, 10);
       let confidence = 0.8;
       let analysis = 'Manual BPM input';
       
-      if (!useManualBPM) {
+      if (!isNaN(bpm) && bpm >= 110 && bpm <= 160) {
         try {
           const gptAnalysis = await GPTUltrasoundAnalyzer.analyzeUltrasound(file);
           bpm = gptAnalysis.bpm;
@@ -163,10 +162,15 @@ export default function Home() {
           console.log('🧪 GPT analysis successful:', gptAnalysis);
         } catch (analysisError) {
           console.warn('🧪 GPT analysis failed, using manual BPM:', analysisError);
-          bpm = manualBPM;
+          bpm = parseInt(manualBpm, 10);
           confidence = 0.6;
           analysis = 'GPT analysis failed - using manual BPM';
         }
+      } else {
+        console.warn('🧪 Manual BPM input is outside valid range (110-160). Using default 155.');
+        bpm = 155;
+        confidence = 0.6;
+        analysis = 'Manual BPM input is outside valid range (110-160). Using default 155.';
       }
       
       console.log('🧪 Using BPM:', bpm);
@@ -362,14 +366,14 @@ export default function Home() {
         console.error('❌ Analysis error stack:', (analysisError as Error)?.stack);
         
         // Fallback to manual BPM when analysis fails
-        console.log('🔄 Falling back to manual BPM:', manualBPM);
+        console.log('🔄 Falling back to manual BPM:', manualBpm);
         gptAnalysis = {
-          bpm: manualBPM,
+          bpm: parseInt(manualBpm, 10),
           confidence: 0.6,
           beat_times_sec: [],
           double_pulse_offset_ms: null,
           amplitude_scalars: [],
-          analysis: `Analysis failed - using manual BPM of ${manualBPM}`,
+          analysis: `Analysis failed - using manual BPM of ${manualBpm}`,
           waveform_extracted: false,
           waveform_confidence: 0
         };
@@ -449,253 +453,132 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        
-        {/* Mode Selection */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex space-x-4 mb-4">
-            <button
-              onClick={() => setTestModeType('analysis')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                testModeType === 'analysis'
-                  ? 'bg-green-100 text-green-700 border-2 border-green-300'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <span className="text-lg">✏️</span>
-              <span>Analysis Only</span>
-            </button>
-            <button
-              onClick={() => setTestModeType('simple-audio')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                testModeType === 'simple-audio'
-                  ? 'bg-green-100 text-green-700 border-2 border-green-300'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <span className="text-lg">🎵</span>
-              <span>♫ Authentic Doppler</span>
-            </button>
-            <button
-              onClick={() => setTestModeType('full')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                testModeType === 'full'
-                  ? 'bg-green-100 text-green-700 border-2 border-green-300'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <span className="text-lg">🚀</span>
-              <span>Full Mode</span>
-            </button>
-          </div>
-          <p className="text-sm text-gray-600">
-            {testModeType === 'analysis' && 'Analysis only: No audio generation'}
-            {testModeType === 'simple-audio' && 'Authentic Doppler: Generate realistic fetal heartbeat audio'}
-            {testModeType === 'full' && 'Full mode: Complete analysis and audio generation'}
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Simple Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Fetal Doppler Audio Generator
+          </h1>
+          <p className="text-gray-600">
+            Generate realistic fetal heartbeat sounds from ultrasound images
           </p>
         </div>
 
-        {/* Important Notice */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-start space-x-3">
-            <span className="text-yellow-600 text-xl">💡</span>
-            <div>
-              <p className="text-yellow-800 font-medium">
-                Need authentic Doppler audio? Switch to "♫ Authentic Doppler" mode below and use manual BPM input for guaranteed authentic fetal heartbeat sounds!
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Test Buttons */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex space-x-4 mb-4">
+        {/* Test Functionality */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Test Audio Generation</h2>
+          <div className="flex gap-4 mb-4">
             <button
               onClick={testBasicFunctionality}
-              className="flex items-center space-x-2 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
-              <span className="text-lg">✏️</span>
-              <span>🧪 Test System Functionality</span>
+              <span>📝</span>
+              Test System Functionality
             </button>
             <button
               onClick={testDopplerSynthesizer}
-              className="flex items-center space-x-2 bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
             >
-              <span className="text-lg">🎵</span>
-              <span>🎵 Test Doppler Synthesizer</span>
+              <span>♫</span>
+              Test Doppler Synthesizer
             </button>
           </div>
           <p className="text-sm text-gray-600">Check browser console for test results</p>
         </div>
 
         {/* Manual BPM Input */}
-        {testModeType === 'simple-audio' && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={useManualBPM}
-                  onChange={(e) => setUseManualBPM(e.target.checked)}
-                  className="rounded"
-                />
-                <span className="text-gray-700">Use Manual BPM</span>
-              </label>
-              {useManualBPM && (
-                <div className="flex items-center space-x-2">
-                  <label className="text-gray-700">BPM:</label>
-                  <input
-                    type="number"
-                    value={manualBPM}
-                    onChange={(e) => setManualBPM(Number(e.target.value))}
-                    min="110"
-                    max="160"
-                    className="border border-gray-300 rounded px-3 py-1 w-20"
-                  />
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Manual BPM Input</h2>
+          <div className="flex items-center gap-4">
+            <label htmlFor="manualBpm" className="text-gray-700 font-medium">
+              BPM (110-160):
+            </label>
+            <input
+              id="manualBpm"
+              type="number"
+              min="110"
+              max="160"
+              value={manualBpm}
+              onChange={(e) => setManualBpm(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="155"
+            />
+                         <button
+               onClick={() => selectedImage && testSimpleAudioGeneration(selectedImage)}
+               className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+             >
+               Generate Audio
+             </button>
+          </div>
+        </div>
+
+        {/* Image Upload */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload your ultrasound image</h2>
+                     <ImageUpload
+             onImageSelect={handleImageSelect}
+           />
+        </div>
+
+        {/* Results */}
+        {result && (
+          <div className="mt-6 bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Generated Audio</h2>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <span className="text-gray-700 font-medium">BPM:</span>
+                <span className="text-gray-900">{result.bpm}</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-gray-700 font-medium">Method:</span>
+                <span className="text-gray-900">{result.method}</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-gray-700 font-medium">Source:</span>
+                <span className="text-gray-900">{result.source}</span>
+              </div>
+              {result.analysis && (
+                <div>
+                  <span className="text-gray-700 font-medium">Analysis:</span>
+                  <p className="text-gray-900 mt-1">{result.analysis}</p>
                 </div>
               )}
+              <audio controls className="w-full">
+                <source src={result.audioUrl} type="audio/wav" />
+                Your browser does not support the audio element.
+              </audio>
             </div>
           </div>
         )}
 
-        {/* Main Upload Section */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Upload your ultrasound image</h2>
-          <ImageUpload
-            onImageSelect={handleImageSelect}
-          />
-        </div>
-      </div>
-
-      {/* Processing Status */}
-      {processingState.isProcessing && (
-        <div className="mb-12">
-          <ProcessingStatus state={processingState} className="max-w-2xl mx-auto" />
-        </div>
-      )}
-
-      {/* Error Display */}
-      {error && !processingState.isProcessing && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center max-w-2xl mx-auto mb-12">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Error</h3>
-          <p className="text-red-700">{error}</p>
-          <button 
-            onClick={() => { 
-              setResult(null); 
-              setError(null); 
-              setProcessingState({ isProcessing: false, step: 'uploading', progress: 0 }) 
-            }} 
-            className="mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
-          >
-            Try Again
-          </button>
-        </div>
-      )}
-
-      {/* Results Section */}
-      {result && (
-        <div className="mb-12">
-          <AudioPlayer 
-            audioUrl={result.audioUrl} 
-            bpm={result.bpm} 
-            isWatermarked={result.isWatermarked} 
-            onDownload={handleDownload} 
-            onUpgrade={handleUpgrade} 
-            className="max-w-2xl mx-auto" 
-          />
-
-          {/* Enhanced GPT Analysis Info */}
-          <div className="mt-4 max-w-2xl mx-auto">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-blue-800">Enhanced GPT-4 Vision Analysis</h3>
-                  <p className="text-sm text-blue-700 mt-1">
-                    Method: {result.method} • Confidence: {Math.round((result.confidence || 0) * 100)}% • Source: {result.source}
-                  </p>
-                </div>
-              </div>
+        {/* Error Display */}
+        {error && (
+          <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <span className="text-red-500">⚠️</span>
+              <span className="text-red-700 font-medium">Error:</span>
             </div>
+            <p className="text-red-600 mt-1">{error}</p>
           </div>
+        )}
 
-          {/* Try Again Button */}
-          <div className="text-center mt-8">
-            <button 
-              onClick={() => { 
-                setResult(null); 
-                setError(null); 
-                setProcessingState({ isProcessing: false, step: 'uploading', progress: 0 }) 
-              }} 
-              className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
-            >
-              Process Another Image
-            </button>
+        {/* Processing Status */}
+        {processingState.isProcessing && (
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-blue-500">🔄</span>
+              <span className="text-blue-700 font-medium">Processing...</span>
+            </div>
+            <div className="w-full bg-blue-200 rounded-full h-2">
+              <div
+                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${processingState.progress}%` }}
+              ></div>
+            </div>
+            <p className="text-blue-600 mt-2">{processingState.step}</p>
           </div>
-        </div>
-      )}
-
-      {/* Features Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">GPT-4 Vision Analysis</h3>
-          <p className="text-gray-600">Advanced AI analyzes your ultrasound image to detect BPM and extract detailed audio characteristics for authentic sound generation.</p>
-        </div>
-        <div className="text-center">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Authentic THUMP-tap Pattern</h3>
-          <p className="text-gray-600">Creates the characteristic fetal Doppler ultrasound sound with deep "THUMP" followed by soft "tap", muffled and warm like it's coming from inside the body.</p>
-        </div>
-        <div className="text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Precise BPM Matching</h3>
-          <p className="text-gray-600">Generates heartbeat audio that perfectly matches the detected BPM (110-160 range) with authentic timing and rhythm variations.</p>
-        </div>
-      </div>
-
-      {/* How It Works */}
-      <div className="bg-white rounded-lg shadow-lg p-8">
-        <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">How It Works</h3>
-        <div className="grid md:grid-cols-4 gap-6">
-          <div className="text-center">
-            <div className="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">1</div>
-            <h4 className="font-semibold text-gray-900 mb-2">Upload Image</h4>
-            <p className="text-sm text-gray-600">Upload your ultrasound image (JPEG or PNG format)</p>
-          </div>
-          <div className="text-center">
-            <div className="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">2</div>
-            <h4 className="font-semibold text-gray-900 mb-2">AI Analysis</h4>
-            <p className="text-sm text-gray-600">GPT-4 Vision analyzes the image for BPM and audio characteristics</p>
-          </div>
-          <div className="text-center">
-            <div className="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">3</div>
-            <h4 className="font-semibold text-gray-900 mb-2">Generate Audio</h4>
-            <p className="text-sm text-gray-600">Create authentic ultrasound heartbeat sounds based on analysis</p>
-          </div>
-          <div className="text-center">
-            <div className="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">4</div>
-            <h4 className="font-semibold text-gray-900 mb-2">Download & Share</h4>
-            <p className="text-sm text-gray-600">Download your personalized heartbeat audio file</p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
