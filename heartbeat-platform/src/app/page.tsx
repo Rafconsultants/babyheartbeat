@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { AudioGenerationResponse, ProcessingState } from '@/types'
 import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer'
-import { ThumpTapDopplerSynthesizer } from '@/lib/thump-tap-doppler'
+import { SoftMuffledDopplerSynthesizer } from '@/lib/soft-muffled-doppler'
 import ImageUpload from '@/components/ImageUpload'
 
 export default function Home() {
@@ -40,8 +40,8 @@ export default function Home() {
         progress: 75
       });
 
-      // Step 2: Generate thump-tap fetal Doppler audio
-      console.log('🎵 Generating thump-tap fetal Doppler audio...');
+      // Step 2: Generate soft muffled fetal Doppler audio
+      console.log('🎵 Generating soft muffled fetal Doppler audio...');
       const dopplerOptions = {
         bpm: analysis.bpm,
         duration: 8.0,
@@ -51,7 +51,7 @@ export default function Home() {
         amplitudeScalars: analysis.amplitude_scalars || []
       };
 
-      const dopplerResult = await ThumpTapDopplerSynthesizer.generateThumpTapDoppler(dopplerOptions);
+      const dopplerResult = await SoftMuffledDopplerSynthesizer.generateSoftMuffledDoppler(dopplerOptions);
       console.log('🎵 Audio generation successful:', dopplerResult);
 
       // Create result
@@ -60,7 +60,7 @@ export default function Home() {
         bpm: dopplerResult.bpm,
         isWatermarked: false,
         confidence: analysis.confidence,
-        method: 'thump-tap-doppler',
+        method: 'soft-muffled-doppler',
         source: 'Ultrasound image analysis',
         analysis: analysis.analysis
       };
