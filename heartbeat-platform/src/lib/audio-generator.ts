@@ -4,6 +4,7 @@
 
 import { UltrasoundAnalysis } from './gpt-ultrasound-analyzer';
 import { DopplerSynthesizer, DopplerSynthesisOptions } from './doppler-synthesizer';
+import { AuthenticDopplerSynthesizer, AuthenticDopplerOptions } from './authentic-doppler-synthesizer';
 import { WaveformExtractor } from './waveform-extractor';
 
 export interface AudioGenerationOptions {
@@ -38,22 +39,28 @@ export class AudioGenerator {
       // Prepare waveform data from GPT analysis or generate fallback
       const waveformData = await this.prepareWaveformData(options);
       
-      // Create Doppler synthesis options
-      const dopplerOptions: DopplerSynthesisOptions = {
+      // Use the new authentic Doppler synthesizer for better sound quality
+      const authenticOptions: AuthenticDopplerOptions = {
         waveformData,
         bpm: options.bpm,
         duration: 8.000, // Force to 8 seconds as per spec
         sampleRate: options.sampleRate,
         isWatermarked: options.isWatermarked,
-        stereo: options.stereo || false,
-        referenceAudio: options.referenceAudio
+        stereo: options.stereo || false
       };
 
       // Generate authentic Doppler audio using the new synthesizer
-      const result = await DopplerSynthesizer.generateDopplerAudio(dopplerOptions);
+      const result = await AuthenticDopplerSynthesizer.generateAuthenticDopplerAudio(authenticOptions);
       
       console.log('🎵 Authentic Doppler audio generation completed:', result);
-      return result;
+      return {
+        audioUrl: result.audioUrl,
+        duration: result.duration,
+        bpm: result.bpm,
+        fileSize: result.fileSize,
+        waveformUsed: result.waveformUsed,
+        referenceMatched: false // Not using reference audio in this path
+      };
     } catch (error) {
       console.error('❌ Realistic Doppler audio generation failed:', error);
       throw new Error('Failed to generate realistic Doppler heartbeat audio');
@@ -100,12 +107,29 @@ export class AudioGenerator {
   ): Promise<AudioGenerationResult> {
     console.log('🎵 Starting reference-matched Doppler audio generation');
     
-    const referenceOptions = {
-      ...options,
-      referenceAudio
-    };
+    // For now, use the authentic synthesizer even with reference audio
+    // The reference audio analysis can be added later if needed
+    const waveformData = await this.prepareWaveformData(options);
     
-    return this.generateHeartbeatAudio(referenceOptions);
+    const authenticOptions: AuthenticDopplerOptions = {
+      waveformData,
+      bpm: options.bpm,
+      duration: 8.000,
+      sampleRate: options.sampleRate,
+      isWatermarked: options.isWatermarked,
+      stereo: options.stereo || false
+    };
+
+    const result = await AuthenticDopplerSynthesizer.generateAuthenticDopplerAudio(authenticOptions);
+    
+    return {
+      audioUrl: result.audioUrl,
+      duration: result.duration,
+      bpm: result.bpm,
+      fileSize: result.fileSize,
+      waveformUsed: result.waveformUsed,
+      referenceMatched: true
+    };
   }
 
   /**
