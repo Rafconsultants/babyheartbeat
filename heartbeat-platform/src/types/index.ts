@@ -29,7 +29,7 @@ export interface AudioGenerationResponse {
   bpm: number;
   isWatermarked: boolean;
   confidence?: number;
-  method?: 'gpt-vision' | 'ocr' | 'waveform' | 'manual' | 'reference-matched';
+  method?: 'gpt-vision' | 'ocr' | 'waveform' | 'manual' | 'reference-matched' | 'simple-doppler';
   source?: string;
   analysis?: string; // Enhanced GPT analysis details
 }
