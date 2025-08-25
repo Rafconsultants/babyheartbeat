@@ -57,11 +57,29 @@ export class RealisticDopplerSynthesizer {
       console.log('🎵 AudioContext ready, state:', this.audioContext.state);
 
       // Create mono audio buffer
+      if (!this.audioContext) {
+        throw new Error('AudioContext initialization failed');
+      }
+      
       const buffer = this.audioContext.createBuffer(1, options.sampleRate * options.duration, options.sampleRate);
       const channelData = buffer.getChannelData(0);
 
       // Generate realistic Doppler heartbeat
       this.generateRealisticDopplerWaveform(channelData, options);
+
+      // Verify audio content
+      const hasAudio = this.verifyAudioContent(channelData);
+      if (!hasAudio) {
+        console.warn('🎵 Generated audio is too quiet, applying amplification');
+        this.amplifyAudio(channelData, 5.0); // Amplify by 5x
+        
+        // Check again after amplification
+        const stillNoAudio = this.verifyAudioContent(channelData);
+        if (!stillNoAudio) {
+          console.warn('🎵 Still no audio after amplification, generating fallback');
+          this.generateFallbackAudio(channelData, options);
+        }
+      }
 
       // Convert to WAV and create blob
       const wavBuffer = this.audioBufferToWAV(buffer);
@@ -70,6 +88,7 @@ export class RealisticDopplerSynthesizer {
 
       console.log('🎵 Realistic Doppler synthesis completed');
       console.log('🎵 Audio blob size:', audioBlob.size, 'bytes');
+      console.log('🎵 Audio URL created:', audioUrl);
 
       return {
         audioUrl,
@@ -99,14 +118,6 @@ export class RealisticDopplerSynthesizer {
 
     console.log('🎵 Beat interval:', beatInterval, 'seconds');
     console.log('🎵 Total samples:', totalSamples);
-
-    // Generate pink noise floor (-36 to -42 dBFS)
-    const pinkNoiseFloor = this.generatePinkNoiseFloor(totalSamples, -39); // -39 dBFS average
-
-    // Fill with pink noise floor
-    for (let i = 0; i < totalSamples; i++) {
-      channelData[i] = pinkNoiseFloor[i];
-    }
 
     // Generate heartbeat pattern
     let currentTime = 0.2; // Start first beat at 200ms
@@ -141,20 +152,12 @@ export class RealisticDopplerSynthesizer {
         );
       }
 
-      // Modulate background noise with beat activity
-      this.modulateBackgroundNoise(
-        channelData,
-        actualBeatTime,
-        beatInterval,
-        sampleRate
-      );
-
       currentTime += beatInterval;
       beatCount++;
     }
 
-    // Apply band-pass filter (200-1200 Hz with emphasis 150-300 Hz)
-    this.applyBandPassFilter(channelData, sampleRate);
+    // Add subtle background noise
+    this.addBackgroundNoise(channelData, sampleRate);
 
     console.log(`🎵 Generated ${beatCount} beats at ${bpm} BPM`);
   }
@@ -181,9 +184,9 @@ export class RealisticDopplerSynthesizer {
     const decaySamples = Math.floor(decayTime * sampleRate);
     const totalSamples = attackSamples + decaySamples;
     
-    const maxAmplitude = amplitude * 0.5; // Strong amplitude for clear beats
+    const maxAmplitude = amplitude * 0.3; // Strong amplitude for clear beats
 
-    console.log(`🎵 Generating burst: start=${startSample}, attack=${attackSamples}, decay=${decaySamples}, total=${totalSamples}`);
+    console.log(`🎵 Generating burst: start=${startSample}, attack=${attackSamples}, decay=${decaySamples}, total=${totalSamples}, amplitude=${maxAmplitude}`);
 
     for (let i = 0; i < totalSamples; i++) {
       const sampleIndex = startSample + i;
@@ -199,7 +202,7 @@ export class RealisticDopplerSynthesizer {
       } else {
         // Decay: exponential fall (60-100ms)
         const decayTimeInBurst = (i - attackSamples) / sampleRate;
-        envelope = Math.exp(-decayTimeInBurst * 8); // Fast decay for realistic sound
+        envelope = Math.exp(-decayTimeInBurst * 6); // Fast decay for realistic sound
       }
 
       // Generate filtered noise with band-pass characteristics
@@ -229,107 +232,119 @@ export class RealisticDopplerSynthesizer {
     filteredNoise += Math.sin(2 * Math.PI * upperFreq * time) * 0.4;
     
     // Add broadband noise for authenticity
-    filteredNoise += (Math.random() - 0.5) * 0.3;
+    filteredNoise += (Math.random() - 0.5) * 0.5;
     
-    return filteredNoise * 0.7; // Normalize
+    return filteredNoise * 0.8; // Normalize
   }
 
   /**
-   * Generate pink noise floor (-36 to -42 dBFS)
+   * Add subtle background noise
    */
-  private static generatePinkNoiseFloor(length: number, levelDB: number): Float32Array {
-    const pinkNoise = new Float32Array(length);
-    const level = Math.pow(10, levelDB / 20); // Convert dB to linear
-    
-    // Pink noise generation using multiple filters
-    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0;
-    
-    for (let i = 0; i < length; i++) {
-      const white = (Math.random() - 0.5) * 2;
-      
-      // Pink noise filters
-      b0 = 0.99886 * b0 + white * 0.0555179;
-      b1 = 0.99332 * b1 + white * 0.0750759;
-      b2 = 0.96900 * b2 + white * 0.1538520;
-      b3 = 0.86650 * b3 + white * 0.3104856;
-      b4 = 0.55000 * b4 + white * 0.5329522;
-      b5 = -0.7616 * b5 - white * 0.0168980;
-      
-      pinkNoise[i] = (b0 + b1 + b2 + b3 + b4 + b5) * level;
-    }
-    
-    return pinkNoise;
-  }
-
-  /**
-   * Modulate background noise with beat activity
-   */
-  private static modulateBackgroundNoise(
-    channelData: Float32Array,
-    beatTime: number,
-    beatInterval: number,
-    sampleRate: number
-  ): void {
-    const beatStartSample = Math.floor(beatTime * sampleRate);
-    const beatEndSample = Math.floor((beatTime + beatInterval) * sampleRate);
-    
-    // Rise background noise during beat, fall between beats
-    for (let i = beatStartSample; i < beatEndSample && i < channelData.length; i++) {
-      const timeInBeat = (i - beatStartSample) / sampleRate;
-      const beatProgress = timeInBeat / beatInterval;
-      
-      // Rise during first 20% of beat interval, then fall
-      let modulation = 1.0;
-      if (beatProgress < 0.2) {
-        // Rise phase
-        modulation = 1.0 + beatProgress * 0.3; // Rise to 1.3x
-      } else {
-        // Fall phase
-        const fallProgress = (beatProgress - 0.2) / 0.8;
-        modulation = 1.3 - fallProgress * 0.3; // Fall from 1.3x to 1.0x
-      }
-      
-      channelData[i] *= modulation;
-    }
-  }
-
-  /**
-   * Apply band-pass filter (200-1200 Hz with emphasis 150-300 Hz)
-   */
-  private static applyBandPassFilter(channelData: Float32Array, sampleRate: number): void {
-    // Band-pass filter implementation
-    const lowFreq = 200 / sampleRate;
-    const highFreq = 1200 / sampleRate;
-    const q = 1.5; // Quality factor for emphasis
-    
-    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  private static addBackgroundNoise(channelData: Float32Array, sampleRate: number): void {
+    console.log('🎵 Adding background noise...');
     
     for (let i = 0; i < channelData.length; i++) {
-      const x0 = channelData[i];
+      const time = i / sampleRate;
       
-      // Band-pass filter coefficients
-      const w0 = 2 * Math.PI * Math.sqrt(lowFreq * highFreq);
-      const alpha = Math.sin(w0) / (2 * q);
-      const cosw0 = Math.cos(w0);
+      // Generate low-level pink noise
+      let background = 0;
       
-      const b0 = alpha;
-      const b1 = 0;
-      const b2 = -alpha;
-      const a0 = 1 + alpha;
-      const a1 = -2 * cosw0;
-      const a2 = 1 - alpha;
+      // Low frequency warmth
+      const warmFreq = 150 + Math.sin(time * 0.1) * 50;
+      background += Math.sin(2 * Math.PI * warmFreq * time) * 0.02;
       
-      // Apply filter
-      const y0 = (b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0;
+      // Mid frequency body
+      const bodyFreq = 400 + Math.sin(time * 0.2) * 100;
+      background += Math.sin(2 * Math.PI * bodyFreq * time) * 0.015;
       
-      channelData[i] = y0;
+      // High frequency air
+      const airFreq = 800 + Math.sin(time * 0.3) * 200;
+      background += Math.sin(2 * Math.PI * airFreq * time) * 0.01;
       
-      // Update history
-      x2 = x1;
-      x1 = x0;
-      y2 = y1;
-      y1 = y0;
+      // Add broadband noise
+      background += (Math.random() - 0.5) * 0.03;
+      
+      channelData[i] += background;
     }
+  }
+
+  /**
+   * Verify audio content has sufficient amplitude
+   */
+  private static verifyAudioContent(channelData: Float32Array): boolean {
+    let maxAmplitude = 0;
+    let rms = 0;
+    
+    for (let i = 0; i < channelData.length; i++) {
+      const absValue = Math.abs(channelData[i]);
+      maxAmplitude = Math.max(maxAmplitude, absValue);
+      rms += channelData[i] * channelData[i];
+    }
+    
+    rms = Math.sqrt(rms / channelData.length);
+    
+    console.log('🎵 Audio verification - Max amplitude:', maxAmplitude, 'RMS:', rms);
+    
+    return maxAmplitude > 0.01 && rms > 0.005; // Should be audible
+  }
+
+  /**
+   * Amplify audio if it's too quiet
+   */
+  private static amplifyAudio(channelData: Float32Array, gain: number): void {
+    console.log('🎵 Amplifying audio by', gain, 'x');
+    
+    for (let i = 0; i < channelData.length; i++) {
+      channelData[i] *= gain;
+    }
+  }
+
+  /**
+   * Generate fallback audio if main synthesis fails
+   */
+  private static generateFallbackAudio(channelData: Float32Array, options: RealisticDopplerOptions): void {
+    console.log('🎵 Generating fallback audio...');
+    
+    const { bpm, duration, sampleRate } = options;
+    const beatInterval = 60 / bpm;
+    
+    // Clear the buffer
+    for (let i = 0; i < channelData.length; i++) {
+      channelData[i] = 0;
+    }
+    
+    // Generate simple but audible heartbeat pattern
+    let currentTime = 0.2;
+    let beatCount = 0;
+    
+    while (currentTime < duration) {
+      const startSample = Math.floor(currentTime * sampleRate);
+      const pulseDuration = 0.1; // 100ms pulse
+      const pulseSamples = Math.floor(pulseDuration * sampleRate);
+      
+      // Generate a simple thump sound
+      for (let i = 0; i < pulseSamples; i++) {
+        const sampleIndex = startSample + i;
+        if (sampleIndex >= channelData.length) break;
+        
+        const timeInPulse = i / sampleRate;
+        const envelope = Math.exp(-timeInPulse * 8); // Fast decay
+        
+        // Simple thump frequency
+        const thumpFreq = 200 + Math.random() * 100;
+        const thump = Math.sin(2 * Math.PI * thumpFreq * timeInPulse) * envelope * 0.4;
+        
+        // Add some noise
+        const noise = (Math.random() - 0.5) * envelope * 0.2;
+        
+        channelData[sampleIndex] = thump + noise;
+      }
+      
+      currentTime += beatInterval;
+      beatCount++;
+    }
+    
+    console.log(`🎵 Fallback audio generated: ${beatCount} beats at ${bpm} BPM`);
   }
 
   /**
