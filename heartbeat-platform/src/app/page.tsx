@@ -38,6 +38,58 @@ export default function Home() {
     checkAPIStatus()
   }, [])
 
+  // Simple test function to check basic functionality
+  const testBasicFunctionality = async () => {
+    console.log('🧪 Testing basic functionality...');
+    
+    try {
+      // Test 1: Check if AudioContext is available
+      console.log('🧪 Test 1: Checking AudioContext...');
+      if (typeof window !== 'undefined') {
+        console.log('🧪 Window object available');
+        if (typeof AudioContext !== 'undefined') {
+          console.log('🧪 AudioContext available');
+          try {
+            const testContext = new AudioContext();
+            console.log('🧪 AudioContext created successfully, state:', testContext.state);
+            testContext.close();
+          } catch (error) {
+            console.error('🧪 AudioContext creation failed:', error);
+          }
+        } else {
+          console.error('🧪 AudioContext not available');
+        }
+      } else {
+        console.error('🧪 Window object not available');
+      }
+
+      // Test 2: Check if GPTUltrasoundAnalyzer is available
+      console.log('🧪 Test 2: Checking GPTUltrasoundAnalyzer...');
+      if (GPTUltrasoundAnalyzer) {
+        console.log('🧪 GPTUltrasoundAnalyzer available');
+      } else {
+        console.error('🧪 GPTUltrasoundAnalyzer not available');
+      }
+
+      // Test 3: Check if AudioGenerator is available
+      console.log('🧪 Test 3: Checking AudioGenerator...');
+      if (AudioGenerator) {
+        console.log('🧪 AudioGenerator available');
+        console.log('🧪 AudioGenerator methods:', Object.getOwnPropertyNames(AudioGenerator));
+      } else {
+        console.error('🧪 AudioGenerator not available');
+      }
+
+      // Test 4: Check environment variables
+      console.log('🧪 Test 4: Checking environment variables...');
+      console.log('🧪 NEXT_PUBLIC_OPENAI_API_KEY exists:', !!process.env.NEXT_PUBLIC_OPENAI_API_KEY);
+      console.log('🧪 NEXT_PUBLIC_OPENAI_API_KEY length:', process.env.NEXT_PUBLIC_OPENAI_API_KEY?.length || 0);
+
+    } catch (error) {
+      console.error('🧪 Basic functionality test failed:', error);
+    }
+  };
+
   const handleReferenceAudioSelect = async (file: File) => {
     console.log('🎵 Loading reference audio file:', file.name);
     setError(null);
@@ -61,6 +113,8 @@ export default function Home() {
 
   const handleImageSelect = async (file: File) => {
     console.log('🚀 Starting image processing for file:', file.name, 'Size:', file.size);
+    console.log('🚀 File type:', file.type);
+    console.log('🚀 File lastModified:', file.lastModified);
     setError(null)
     setResult(null)
     
@@ -75,12 +129,19 @@ export default function Home() {
 
       // Enhanced GPT-4 Vision analysis with detailed audio characteristics
       console.log('🚀 Calling GPTUltrasoundAnalyzer.analyzeUltrasound...');
+      console.log('🚀 GPTUltrasoundAnalyzer object:', GPTUltrasoundAnalyzer);
+      console.log('🚀 GPTUltrasoundAnalyzer.analyzeUltrasound method:', typeof GPTUltrasoundAnalyzer.analyzeUltrasound);
+      
       let gptAnalysis;
       try {
+        console.log('🚀 About to call analyzeUltrasound...');
         gptAnalysis = await GPTUltrasoundAnalyzer.analyzeUltrasound(file);
         console.log('🚀 GPT Analysis completed:', gptAnalysis);
       } catch (analysisError) {
         console.error('❌ GPT Analysis failed:', analysisError);
+        console.error('❌ Analysis error type:', typeof analysisError);
+        console.error('❌ Analysis error constructor:', analysisError?.constructor?.name);
+        console.error('❌ Analysis error stack:', (analysisError as Error)?.stack);
         throw new Error(`Image analysis failed: ${analysisError instanceof Error ? analysisError.message : 'Unknown error'}`);
       }
 
@@ -94,6 +155,8 @@ export default function Home() {
 
       // Generate authentic fetal Doppler ultrasound heartbeat audio using GPT-4 Vision analysis
       console.log('🚀 Calling AudioGenerator.generateHeartbeatAudio...');
+      console.log('🚀 AudioGenerator object:', AudioGenerator);
+      console.log('🚀 AudioGenerator.generateHeartbeatAudio method:', typeof AudioGenerator.generateHeartbeatAudio);
       
       let audioUrl: string;
       let referenceMatched = false;
@@ -118,6 +181,15 @@ export default function Home() {
         } else {
           // Use standard synthesis with noise burst synthesizer
           console.log('🎵 Using standard noise burst synthesis');
+          console.log('🎵 Options being passed:', {
+            bpm: gptAnalysis.bpm,
+            duration: 8,
+            sampleRate: 44100,
+            isWatermarked: true,
+            gptAnalysis: gptAnalysis,
+            stereo: true
+          });
+          
           const audioResult = await AudioGenerator.generateHeartbeatAudio({
             bpm: gptAnalysis.bpm,
             duration: 8,
@@ -132,10 +204,14 @@ export default function Home() {
         console.log('🚀 Audio generation completed, URL:', audioUrl);
       } catch (audioError) {
         console.error('❌ Audio generation failed:', audioError);
+        console.error('❌ Audio error type:', typeof audioError);
+        console.error('❌ Audio error constructor:', audioError?.constructor?.name);
+        console.error('❌ Audio error stack:', (audioError as Error)?.stack);
         throw new Error(`Audio generation failed: ${audioError instanceof Error ? audioError.message : 'Unknown error'}`);
       }
 
       // Create the result with enhanced GPT analysis
+      console.log('🚀 Creating final result...');
       const finalResult: AudioGenerationResponse = {
         audioUrl: audioUrl,
         bpm: gptAnalysis.bpm,
@@ -160,6 +236,9 @@ export default function Home() {
 
     } catch (err) {
       console.error('❌ Processing failed:', err);
+      console.error('❌ Error type:', typeof err);
+      console.error('❌ Error constructor:', err?.constructor?.name);
+      console.error('❌ Error stack:', (err as Error)?.stack);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       console.error('❌ Error details:', errorMessage);
       setError(`Unable to process your image: ${errorMessage}`)
@@ -289,7 +368,20 @@ export default function Home() {
         {/* Upload Section */}
         {!processingState.isProcessing && !result && (
           <div className="mb-12">
-            <ImageUpload onImageSelect={handleImageSelect} onError={handleError} className="max-w-2xl mx-auto" />
+            <div className="max-w-2xl mx-auto space-y-4">
+              {/* Test Button */}
+              <div className="text-center">
+                <button
+                  onClick={testBasicFunctionality}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+                >
+                  🧪 Test System Functionality
+                </button>
+                <p className="text-xs text-gray-500 mt-2">Check browser console for test results</p>
+              </div>
+              
+              <ImageUpload onImageSelect={handleImageSelect} onError={handleError} className="max-w-2xl mx-auto" />
+            </div>
           </div>
         )}
 
