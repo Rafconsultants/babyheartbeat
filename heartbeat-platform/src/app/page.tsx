@@ -7,6 +7,7 @@ import AudioPlayer from '@/components/AudioPlayer'
 import { ProcessingState, AudioGenerationResponse } from '@/types'
 import { GPTUltrasoundAnalyzer } from '@/lib/gpt-ultrasound-analyzer' // Updated import
 import { AudioGenerator } from '@/lib/audio-generator' // Updated import
+import { ReferenceAudioLoader, ReferenceAudioInfo } from '@/lib/reference-audio-loader' // Reference audio support
 import { testOpenAIAPI } from '@/lib/api-test' // Add API test import
 
 export default function Home() {
@@ -18,6 +19,8 @@ export default function Home() {
   const [result, setResult] = useState<AudioGenerationResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [apiStatus, setApiStatus] = useState<'checking' | 'available' | 'unavailable'>('checking')
+  const [referenceAudio, setReferenceAudio] = useState<ReferenceAudioInfo | null>(null)
+  const [useReferenceAudio, setUseReferenceAudio] = useState(false)
 
   // Check API status on component mount
   useEffect(() => {
@@ -34,6 +37,27 @@ export default function Home() {
     
     checkAPIStatus()
   }, [])
+
+  const handleReferenceAudioSelect = async (file: File) => {
+    console.log('🎵 Loading reference audio file:', file.name);
+    setError(null);
+    
+    try {
+      const audioInfo = await ReferenceAudioLoader.loadReferenceAudio(file);
+      
+      if (audioInfo.isValid) {
+        setReferenceAudio(audioInfo);
+        setUseReferenceAudio(true);
+        console.log('🎵 Reference audio loaded successfully:', audioInfo);
+      } else {
+        setError(audioInfo.errorMessage || 'Failed to load reference audio');
+        console.error('❌ Reference audio loading failed:', audioInfo.errorMessage);
+      }
+    } catch (err) {
+      console.error('❌ Reference audio loading failed:', err);
+      setError('Failed to load reference audio file');
+    }
+  };
 
   const handleImageSelect = async (file: File) => {
     console.log('🚀 Starting image processing for file:', file.name, 'Size:', file.size);
@@ -64,7 +88,31 @@ export default function Home() {
 
       // Generate authentic fetal Doppler ultrasound heartbeat audio using GPT-4 Vision analysis
       console.log('🚀 Calling AudioGenerator.generateFetalDopplerHeartbeat...');
-      const audioUrl = await AudioGenerator.generateFetalDopplerHeartbeat(gptAnalysis.bpm, 8, gptAnalysis)
+      
+      let audioUrl: string;
+      let referenceMatched = false;
+      
+      if (useReferenceAudio && referenceAudio?.audioBuffer) {
+        // Use reference audio for enhanced synthesis
+        console.log('🎵 Using reference audio for enhanced synthesis');
+        const audioResult = await AudioGenerator.generateWithReferenceMatching(
+          {
+            bpm: gptAnalysis.bpm,
+            duration: 8,
+            sampleRate: 44100,
+            isWatermarked: true,
+            gptAnalysis: gptAnalysis,
+            stereo: true
+          },
+          referenceAudio.audioBuffer
+        );
+        audioUrl = audioResult.audioUrl;
+        referenceMatched = audioResult.referenceMatched;
+      } else {
+        // Use standard synthesis
+        audioUrl = await AudioGenerator.generateFetalDopplerHeartbeat(gptAnalysis.bpm, 8, gptAnalysis);
+      }
+      
       console.log('🚀 Audio generation completed, URL:', audioUrl);
 
       // Create the result with enhanced GPT analysis
@@ -73,8 +121,10 @@ export default function Home() {
         bpm: gptAnalysis.bpm,
         isWatermarked: true, // For now, all generated audio is watermarked
         confidence: gptAnalysis.confidence,
-        method: 'gpt-vision',
-        source: 'Enhanced GPT-4 Vision analysis with audio characteristics',
+        method: referenceMatched ? 'reference-matched' : 'gpt-vision',
+        source: referenceMatched 
+          ? 'Enhanced GPT-4 Vision analysis with reference audio matching'
+          : 'Enhanced GPT-4 Vision analysis with audio characteristics',
         analysis: gptAnalysis.analysis // Pass detailed GPT analysis to result
       }
 
@@ -153,6 +203,66 @@ export default function Home() {
             Upload your ultrasound image and let GPT-4 Vision create authentic fetal heartbeat sounds with the characteristic "THUMP-tap" pattern, soft and muffled like it's coming from inside the body.
           </p>
         </div>
+
+        {/* Reference Audio Upload Section */}
+        {!processingState.isProcessing && !result && (
+          <div className="mb-8">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 text-center">🎵 Reference Audio (Optional)</h3>
+              <p className="text-gray-600 text-center mb-6 text-sm">
+                Upload a real Doppler audio sample to match its acoustic characteristics for ultra-realistic synthesis
+              </p>
+              
+              <div className="max-w-md mx-auto">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleReferenceAudioSelect(file);
+                    }}
+                    className="hidden"
+                    id="reference-audio-upload"
+                  />
+                  <label htmlFor="reference-audio-upload" className="cursor-pointer">
+                    <svg className="mx-auto h-8 w-8 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <p className="mt-2 text-sm text-gray-600">
+                      {referenceAudio ? `Reference loaded: ${referenceAudio.audioBuffer.duration.toFixed(1)}s` : 'Click to upload reference audio'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">WAV, MP3, OGG (min 10s)</p>
+                  </label>
+                </div>
+                
+                {referenceAudio && (
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="ml-2 text-sm text-green-800">
+                          Reference audio loaded ({referenceAudio.audioBuffer.duration.toFixed(1)}s)
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setReferenceAudio(null);
+                          setUseReferenceAudio(false);
+                        }}
+                        className="text-green-600 hover:text-green-800 text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Upload Section */}
         {!processingState.isProcessing && !result && (

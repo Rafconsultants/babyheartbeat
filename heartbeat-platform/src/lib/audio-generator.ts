@@ -13,6 +13,7 @@ export interface AudioGenerationOptions {
   isWatermarked: boolean;
   gptAnalysis?: UltrasoundAnalysis; // Enhanced GPT analysis
   stereo?: boolean; // Enable stereo rendering for spatial realism
+  referenceAudio?: AudioBuffer; // Optional reference audio for analysis
 }
 
 export interface AudioGenerationResult {
@@ -21,6 +22,7 @@ export interface AudioGenerationResult {
   bpm: number;
   fileSize: number;
   waveformUsed: boolean; // Whether actual waveform was used vs fallback
+  referenceMatched: boolean; // Whether reference audio was used for analysis
 }
 
 export class AudioGenerator {
@@ -43,7 +45,8 @@ export class AudioGenerator {
         duration: 8.000, // Force to 8 seconds as per spec
         sampleRate: options.sampleRate,
         isWatermarked: options.isWatermarked,
-        stereo: options.stereo || false
+        stereo: options.stereo || false,
+        referenceAudio: options.referenceAudio
       };
 
       // Generate authentic Doppler audio using the new synthesizer
@@ -86,6 +89,23 @@ export class AudioGenerator {
         extractedPoints: []
       };
     }
+  }
+
+  /**
+   * Generate audio with reference matching for authentic Doppler characteristics
+   */
+  static async generateWithReferenceMatching(
+    options: AudioGenerationOptions, 
+    referenceAudio: AudioBuffer
+  ): Promise<AudioGenerationResult> {
+    console.log('🎵 Starting reference-matched Doppler audio generation');
+    
+    const referenceOptions = {
+      ...options,
+      referenceAudio
+    };
+    
+    return this.generateHeartbeatAudio(referenceOptions);
   }
 
   /**
