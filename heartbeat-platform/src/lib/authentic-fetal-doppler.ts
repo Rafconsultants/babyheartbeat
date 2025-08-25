@@ -69,8 +69,8 @@ export class AuthenticFetalDopplerSynthesizer {
       // Generate authentic fetal Doppler waveform
       this.generateAuthenticWaveform(channelData, options);
 
-      // Apply amniotic fluid and tissue filtering
-      this.applyAmnioticFiltering(channelData);
+      // Apply tissue filtering only (no amniotic fluid effects)
+      this.applyTissueFiltering(channelData);
 
       // Convert to WAV and create blob
       const wavBuffer = this.audioBufferToWAV(buffer);
@@ -102,10 +102,7 @@ export class AuthenticFetalDopplerSynthesizer {
   private static generateAuthenticWaveform(channelData: Float32Array, options: AuthenticFetalDopplerOptions): void {
     const { sampleRate, duration, beatTimesSec, doublePulseOffsetMs = 60 } = options;
     
-    // Generate background amniotic fluid noise
-    this.generateAmnioticBackground(channelData, sampleRate, duration);
-    
-    // Generate beats at specified times
+    // Generate beats at specified times (no background noise)
     beatTimesSec.forEach((beatTime, index) => {
       if (beatTime >= 0 && beatTime < duration) {
         const amplitude = options.amplitudeScalars?.[index] || 0.8;
@@ -139,7 +136,6 @@ export class AuthenticFetalDopplerSynthesizer {
     // Frequency components for THUMP
     const fundamentalFreq = 80; // Deep fundamental
     const harmonicFreqs = [160, 240, 320, 400]; // Harmonics for fullness
-    const noiseBand = [200, 600]; // Noise band for whooshing
     
     for (let i = 0; i < numSamples; i++) {
       const sampleIndex = startSample + i;
@@ -167,10 +163,6 @@ export class AuthenticFetalDopplerSynthesizer {
         thump += Math.sin(2 * Math.PI * freq * time) * harmonicAmp;
       });
       
-      // Noise component for whooshing
-      const noiseFreq = noiseBand[0] + (noiseBand[1] - noiseBand[0]) * Math.random();
-      thump += (Math.random() - 0.5) * 0.3 * Math.sin(2 * Math.PI * noiseFreq * time);
-      
       // Apply envelope and amplitude
       channelData[sampleIndex] += thump * envelope * amplitude * 0.8;
     }
@@ -193,7 +185,6 @@ export class AuthenticFetalDopplerSynthesizer {
     // Frequency components for tap
     const fundamentalFreq = 120; // Higher than THUMP
     const harmonicFreqs = [240, 360, 480]; // Higher harmonics
-    const noiseBand = [300, 800]; // Higher noise band
     
     for (let i = 0; i < numSamples; i++) {
       const sampleIndex = startSample + i;
@@ -221,59 +212,12 @@ export class AuthenticFetalDopplerSynthesizer {
         tap += Math.sin(2 * Math.PI * freq * time) * harmonicAmp;
       });
       
-      // Noise component
-      const noiseFreq = noiseBand[0] + (noiseBand[1] - noiseBand[0]) * Math.random();
-      tap += (Math.random() - 0.5) * 0.2 * Math.sin(2 * Math.PI * noiseFreq * time);
-      
       // Apply envelope and amplitude
       channelData[sampleIndex] += tap * envelope * amplitude * 0.6;
     }
   }
 
-  /**
-   * Generate amniotic fluid background noise
-   */
-  private static generateAmnioticBackground(channelData: Float32Array, sampleRate: number, duration: number): void {
-    const numSamples = channelData.length;
-    
-    // Pink noise generation for amniotic fluid
-    const pinkNoise = this.generatePinkNoise(numSamples);
-    
-    // Low-pass filter to simulate fluid damping
-    const cutoffFreq = 800; // Hz
-    const filteredNoise = this.applyLowPassFilter(pinkNoise, sampleRate, cutoffFreq);
-    
-    // Gentle modulation to simulate fluid movement
-    for (let i = 0; i < numSamples; i++) {
-      const time = i / sampleRate;
-      const modulation = 0.5 + 0.3 * Math.sin(2 * Math.PI * 0.5 * time); // Slow modulation
-      channelData[i] = filteredNoise[i] * modulation * 0.1; // Very low amplitude
-    }
-  }
 
-  /**
-   * Generate pink noise
-   */
-  private static generatePinkNoise(length: number): Float32Array {
-    const noise = new Float32Array(length);
-    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-    
-    for (let i = 0; i < length; i++) {
-      const white = Math.random() * 2 - 1;
-      
-      b0 = 0.99886 * b0 + white * 0.0555179;
-      b1 = 0.99332 * b1 + white * 0.0750759;
-      b2 = 0.96900 * b2 + white * 0.1538520;
-      b3 = 0.86650 * b3 + white * 0.3104856;
-      b4 = 0.55000 * b4 + white * 0.5329522;
-      b5 = -0.7616 * b5 - white * 0.0168980;
-      
-      noise[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
-      b6 = white * 0.115926;
-    }
-    
-    return noise;
-  }
 
   /**
    * Apply low-pass filter
@@ -293,9 +237,9 @@ export class AuthenticFetalDopplerSynthesizer {
   }
 
   /**
-   * Apply amniotic fluid and tissue filtering
+   * Apply tissue filtering only (no amniotic fluid effects)
    */
-  private static applyAmnioticFiltering(channelData: Float32Array): void {
+  private static applyTissueFiltering(channelData: Float32Array): void {
     // Apply gentle low-pass filter to simulate tissue damping
     const sampleRate = 44100;
     const cutoffFreq = 1200; // Hz - tissue filtering
