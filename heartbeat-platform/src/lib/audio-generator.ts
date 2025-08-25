@@ -5,6 +5,7 @@
 import { UltrasoundAnalysis } from './gpt-ultrasound-analyzer';
 import { DopplerSynthesizer, DopplerSynthesisOptions } from './doppler-synthesizer';
 import { AuthenticDopplerSynthesizer, AuthenticDopplerOptions } from './authentic-doppler-synthesizer';
+import { RealisticDopplerSynthesizer, RealisticDopplerOptions } from './realistic-doppler-synthesizer';
 import { WaveformExtractor } from './waveform-extractor';
 
 export interface AudioGenerationOptions {
@@ -39,8 +40,8 @@ export class AudioGenerator {
       // Prepare waveform data from GPT analysis or generate fallback
       const waveformData = await this.prepareWaveformData(options);
       
-      // Use the new authentic Doppler synthesizer for better sound quality
-      const authenticOptions: AuthenticDopplerOptions = {
+      // Use the new realistic Doppler synthesizer for authentic sound quality
+      const realisticOptions: RealisticDopplerOptions = {
         waveformData,
         bpm: options.bpm,
         duration: 8.000, // Force to 8 seconds as per spec
@@ -49,10 +50,10 @@ export class AudioGenerator {
         stereo: options.stereo || false
       };
 
-      // Generate authentic Doppler audio using the new synthesizer
-      const result = await AuthenticDopplerSynthesizer.generateAuthenticDopplerAudio(authenticOptions);
+      // Generate realistic Doppler audio using the new synthesizer
+      const result = await RealisticDopplerSynthesizer.generateRealisticDopplerAudio(realisticOptions);
       
-      console.log('🎵 Authentic Doppler audio generation completed:', result);
+      console.log('🎵 Realistic Doppler audio generation completed:', result);
       return {
         audioUrl: result.audioUrl,
         duration: result.duration,
@@ -107,11 +108,10 @@ export class AudioGenerator {
   ): Promise<AudioGenerationResult> {
     console.log('🎵 Starting reference-matched Doppler audio generation');
     
-    // For now, use the authentic synthesizer even with reference audio
-    // The reference audio analysis can be added later if needed
+    // Use the realistic synthesizer for reference matching as well
     const waveformData = await this.prepareWaveformData(options);
     
-    const authenticOptions: AuthenticDopplerOptions = {
+    const realisticOptions: RealisticDopplerOptions = {
       waveformData,
       bpm: options.bpm,
       duration: 8.000,
@@ -120,7 +120,7 @@ export class AudioGenerator {
       stereo: options.stereo || false
     };
 
-    const result = await AuthenticDopplerSynthesizer.generateAuthenticDopplerAudio(authenticOptions);
+    const result = await RealisticDopplerSynthesizer.generateRealisticDopplerAudio(realisticOptions);
     
     return {
       audioUrl: result.audioUrl,
