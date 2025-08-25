@@ -454,39 +454,39 @@ export default function Home() {
         
         {/* Mode Selection */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex gap-4 mb-4">
+          <div className="flex space-x-4 mb-4">
             <button
               onClick={() => setTestModeType('analysis')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                 testModeType === 'analysis'
                   ? 'bg-green-100 text-green-700 border-2 border-green-300'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <span className="text-green-600">✏️</span>
-              Analysis Only
+              <span className="text-lg">✏️</span>
+              <span>Analysis Only</span>
             </button>
             <button
               onClick={() => setTestModeType('simple-audio')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                 testModeType === 'simple-audio'
-                  ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
+                  ? 'bg-green-100 text-green-700 border-2 border-green-300'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <span className="text-blue-600">♫</span>
-              Authentic Doppler
+              <span className="text-lg">🎵</span>
+              <span>♫ Authentic Doppler</span>
             </button>
             <button
               onClick={() => setTestModeType('full')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                 testModeType === 'full'
-                  ? 'bg-purple-100 text-purple-700 border-2 border-purple-300'
+                  ? 'bg-green-100 text-green-700 border-2 border-green-300'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <span className="text-purple-600">🚀</span>
-              Full Mode
+              <span className="text-lg">🚀</span>
+              <span>Full Mode</span>
             </button>
           </div>
           <p className="text-sm text-gray-600">
@@ -498,7 +498,7 @@ export default function Home() {
 
         {/* Important Notice */}
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
+          <div className="flex items-start space-x-3">
             <span className="text-yellow-600 text-xl">💡</span>
             <div>
               <p className="text-yellow-800 font-medium">
@@ -509,73 +509,63 @@ export default function Home() {
         </div>
 
         {/* Test Buttons */}
-        {isTestMode && (
-          <div className="text-center space-y-2">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex space-x-4 mb-4">
             <button
               onClick={testBasicFunctionality}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+              className="flex items-center space-x-2 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors"
             >
-              🧪 Test System Functionality
+              <span className="text-lg">✏️</span>
+              <span>🧪 Test System Functionality</span>
             </button>
             <button
               onClick={testDopplerSynthesizer}
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 ml-2"
+              className="flex items-center space-x-2 bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors"
             >
-              🎵 Test Doppler Synthesizer
+              <span className="text-lg">🎵</span>
+              <span>🎵 Test Doppler Synthesizer</span>
             </button>
-            <p className="text-xs text-gray-500">Check browser console for test results</p>
           </div>
-        )}
+          <p className="text-sm text-gray-600">Check browser console for test results</p>
+        </div>
 
         {/* Manual BPM Input */}
-        {isTestMode && testModeType === 'simple-audio' && (
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 text-center">🎯 Manual BPM Input</h3>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
+        {testModeType === 'simple-audio' && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  id="useManualBPM"
                   checked={useManualBPM}
                   onChange={(e) => setUseManualBPM(e.target.checked)}
-                  className="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
+                  className="rounded"
                 />
-                <label htmlFor="useManualBPM" className="text-sm font-medium text-gray-700">
-                  Use manual BPM instead of image analysis
-                </label>
-              </div>
-              
-              <div className="space-y-2">
-                <label htmlFor="manualBPM" className="block text-sm font-medium text-gray-700">
-                  BPM Value (110-160)
-                </label>
-                <input
-                  type="number"
-                  id="manualBPM"
-                  min="110"
-                  max="160"
-                  value={manualBPM}
-                  onChange={(e) => setManualBPM(parseInt(e.target.value) || 155)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  placeholder="155"
-                />
-                <p className="text-xs text-gray-500">
-                  Enter the BPM value you see in the ultrasound image
-                </p>
-              </div>
+                <span className="text-gray-700">Use Manual BPM</span>
+              </label>
+              {useManualBPM && (
+                <div className="flex items-center space-x-2">
+                  <label className="text-gray-700">BPM:</label>
+                  <input
+                    type="number"
+                    value={manualBPM}
+                    onChange={(e) => setManualBPM(Number(e.target.value))}
+                    min="110"
+                    max="160"
+                    className="border border-gray-300 rounded px-3 py-1 w-20"
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}
-        
-        <ImageUpload 
-          onImageSelect={
-            testModeType === 'analysis' ? testImageAnalysisOnly :
-            testModeType === 'simple-audio' ? testSimpleAudioGeneration :
-            handleImageSelect
-          } 
-          onError={handleError} 
-          className="max-w-2xl mx-auto" 
-        />
+
+        {/* Main Upload Section */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Upload your ultrasound image</h2>
+          <ImageUpload
+            onImageSelect={handleImageSelect}
+          />
+        </div>
       </div>
 
       {/* Processing Status */}
